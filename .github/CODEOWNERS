@@ -1,0 +1,5 @@
+# All changes to master require the repository owner's review.
+* @lxf-sinksky
+
+# Protect the ownership policy itself.
+/.github/ @lxf-sinksky

@@ -35,6 +35,12 @@ These game and mod dependencies are **not included** in this repository. Their n
 
 The script builds `42/media/java/client/OldPoint.jar`. Install the `42` directory as the OldPoint mod. Lua sources and translations are under `42/media/lua`.
 
+## 参与开发 / Contributing
+
+请从 `master` 创建修改分支，并通过 Pull Request 提交，由 `@lxf-sinksky` 审查。步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+Base changes on `master` and submit a pull request for review by `@lxf-sinksky`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## 许可证 / License
 
 Copyright (C) 2026 sinksky. 本仓库中的 OldPoint 原创源码、脚本和翻译以 **GNU GPL v3.0 only** 授权，完整条款见 [LICENSE](LICENSE)（SPDX: `GPL-3.0-only`）。第三方游戏、模组及其素材不包含在本授权中；见 [THIRD_PARTY.md](THIRD_PARTY.md)。
