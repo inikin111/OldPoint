@@ -1,0 +1,10 @@
+name=OldPoint
+id=OldPoint
+author=sinksky
+modversion=0.6.153
+versionMin=42.21
+require=Viewpoint
+javaJarFile=media/java/client/OldPoint.jar
+javaPkgName=oldpoint.viewpoint
+ZBVersionMin=2.3.0
+description=Adds a playable overhead camera to Viewpoint's Shift+O cycle, with room ceiling cutaways, obstruction wall fading, projected aiming and smooth independent zoom. Requires Viewpoint 0.1.6 and Project Zomboid 42.21.
