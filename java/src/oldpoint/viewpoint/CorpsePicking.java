@@ -81,7 +81,7 @@ public final class CorpsePicking {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
             var picked = UIManager.getPicked();
-            if (CameraController.topDownActive()
+            if (Bridge.topDownActive()
                     && picked != null
                     && picked.tile instanceof IsoDeadBody body
                     && UpperFloorObjects.hidden(body)) {

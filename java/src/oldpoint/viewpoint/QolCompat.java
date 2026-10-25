@@ -10,13 +10,13 @@ public final class QolCompat {
     public static final class ZoomAvailable {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
             // QOL's Lua handler exits; its smooth-zoom tick also drops a stale target.
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -26,7 +26,7 @@ public final class QolCompat {
     public static final class ThirdPerson {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
     }
 
@@ -34,7 +34,7 @@ public final class QolCompat {
     public static final class Factor {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
     }
 
@@ -42,12 +42,12 @@ public final class QolCompat {
     public static final class Fov {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) float result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = Layout.FOV;
             }
         }

@@ -129,7 +129,7 @@ public final class MouseInteraction {
         @Patch.OnExit
         public static void exit(
                 @Patch.Argument(0) IsoGameCharacter value, @Patch.Return(readOnly = false) IsoPlayer result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = MouseInteraction.player(value);
             }
         }

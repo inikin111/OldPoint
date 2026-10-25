@@ -87,7 +87,7 @@ public final class VehiclePicking {
     public static final class TargetPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) BaseVehicle result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = VehiclePicking.current();
             }
         }
@@ -97,7 +97,7 @@ public final class VehiclePicking {
     public static final class ClickPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (!CameraController.topDownActive() || Pointer.overUI()) {
+            if (!Bridge.topDownActive() || Pointer.overUI()) {
                 return;
             }
             var picked = zombie.ui.UIManager.getPicked();

@@ -135,7 +135,7 @@ public final class UpperFloorObjects {
     public static final class PickPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) IsoObject result) {
-            if (result == null || !CameraController.topDownActive()) {
+            if (result == null || !Bridge.topDownActive()) {
                 return;
             }
             var square = result.getSquare();

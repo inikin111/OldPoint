@@ -23,4 +23,12 @@ foreach ($runner in @('run_camera_tests.py', 'run_capture_tests.py', 'run_drawin
     & python (Join-Path $PSScriptRoot "tests\$runner") --jdk $Jdk
     if ($LASTEXITCODE -ne 0) { throw "$runner failed" }
 }
+$hookOut = Join-Path $PSScriptRoot 'build\hook-tests'
+New-Item -ItemType Directory -Force -Path $hookOut | Out-Null
+& (Join-Path $Jdk 'bin\javac.exe') --release 17 -encoding UTF-8 -classpath $ZombieBuddy -d $hookOut `
+    (Join-Path $PSScriptRoot 'tests\oldpoint\viewpoint\HookInliningTest.java')
+if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test compilation failed' }
+$jar = Join-Path $repo '42\media\java\client\OldPoint.jar'
+& (Join-Path $Jdk 'bin\java.exe') -cp "$hookOut;$jar;$Viewpoint;$Game;$ZombieBuddy" oldpoint.viewpoint.HookInliningTest
+if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test failed' }
 Write-Output 'Camera behavior tests passed. No deployment performed.'

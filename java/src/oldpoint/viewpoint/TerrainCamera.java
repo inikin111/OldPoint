@@ -61,7 +61,7 @@ public final class TerrainCamera {
     public static final class ThirdPatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter(@Patch.Argument(0) Object frame) {
-            return CameraDrawing.frameTopDown(frame);
+            return Bridge.frameTopDown(frame);
         }
     }
 
@@ -69,7 +69,7 @@ public final class TerrainCamera {
     public static final class EyePatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter(@Patch.Argument(0) Object frame) {
-            return CameraDrawing.frameTopDown(frame);
+            return Bridge.frameTopDown(frame);
         }
     }
 
@@ -77,7 +77,7 @@ public final class TerrainCamera {
     public static final class FreePatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter(@Patch.Argument(0) Object frame) {
-            return CameraDrawing.frameTopDown(frame);
+            return Bridge.frameTopDown(frame);
         }
     }
 
@@ -85,7 +85,7 @@ public final class TerrainCamera {
     public static final class ChestPatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter(@Patch.Argument(0) Object frame) {
-            return CameraDrawing.frameTopDown(frame);
+            return Bridge.frameTopDown(frame);
         }
     }
 }

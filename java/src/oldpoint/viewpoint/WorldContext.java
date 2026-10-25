@@ -199,7 +199,7 @@ public final class WorldContext {
     public static final class VehiclePatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) BaseVehicle result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = inMenu() ? vehicle() : VehiclePicking.current();
             }
         }

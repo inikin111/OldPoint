@@ -19,7 +19,7 @@
 | OcclusionShaders | 内置/Iris 着色器文本转换，不访问帧状态或游戏世界 |
 | CutawayData | 原有 GPU 缓冲、纹理与采样器绑定、恢复 |
 
-内部功能模块直接访问 CameraController 或 CameraDrawing，不再通过 Bridge 查询或切换状态。Bridge 作为外部入口保留。Interior 原有的 shader、uniforms、irisUniforms、begin/end 方法也保留委托，避免改动既有调用协议。
+普通业务方法直接访问 CameraController 或 CameraDrawing。标注 @Patch 的 Hook 方法体会被 ZombieBuddy 内联到 Viewpoint 或游戏包，必须通过 public 类和 public 方法调用；这些回调保留 Bridge 公开入口，不能直接调用包内可见的 Controller/Drawing。Interior 原有的 shader、uniforms、irisUniforms、begin/end 方法也保留委托，避免改动既有调用协议。
 
 ```mermaid
 flowchart TD
@@ -87,6 +87,7 @@ CameraDrawing 在 beginDrawing 绑定该帧快照，在 endDrawing 清除线程�
 - 生命周期：19 个场景，覆盖模式切换、记忆返回、异步进入、取消及旋转。
 - 帧捕获：7 个场景，覆盖坐标约定、普通视角清除旧快照、帧复用、多帧隔离、只读快照与瞄准平移。
 - 绘制：11 个场景，覆盖快照读取、相机位置、居中、无效向量、线程隔离和异常后的清理。
+- Hook 内联：使用安装的 ZombieBuddy 所带 ByteBuddy，把 3 个真实生产回调内联到外部包的目标方法并执行，覆盖启动光标、进入回调与帧查询。此测试在修复前复现 CameraController 的 IllegalAccessError，修复后通过；不是仅对比注解或私有成员名称。
 
 这些场景执行真实业务模块，以模拟环境代替游戏及 OpenGL。不保留依赖历史 JAR 的 Hook/规则/着色器对比脚本、私有反射成员签名检查，以及重复实现字段赋值的断言。
 

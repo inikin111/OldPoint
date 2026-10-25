@@ -23,12 +23,12 @@ public final class ShootToThrillCompat {
     public static final class Installed {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -38,12 +38,12 @@ public final class ShootToThrillCompat {
     public static final class CursorBlocksAim {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -53,12 +53,12 @@ public final class ShootToThrillCompat {
     public static final class ToggleInput {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -68,12 +68,12 @@ public final class ShootToThrillCompat {
     public static final class CtrlAim {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -83,12 +83,12 @@ public final class ShootToThrillCompat {
     public static final class TransitionAttack {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -98,13 +98,13 @@ public final class ShootToThrillCompat {
     public static final class AttackInput {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Argument(1) boolean original, @Patch.Return(readOnly = false) boolean result) {
             // Preserve native input and its existing UI/player-state checks.
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = original;
             }
         }
@@ -114,12 +114,12 @@ public final class ShootToThrillCompat {
     public static final class BlockAttack {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -129,7 +129,7 @@ public final class ShootToThrillCompat {
     public static final class PollAim {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
     }
 
@@ -137,7 +137,7 @@ public final class ShootToThrillCompat {
     public static final class Tick {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
     }
 
@@ -145,12 +145,12 @@ public final class ShootToThrillCompat {
     public static final class Reticle {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -160,7 +160,7 @@ public final class ShootToThrillCompat {
     public static final class Camera {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
     }
 
@@ -168,13 +168,13 @@ public final class ShootToThrillCompat {
     public static final class Fire {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
             // false tells the mod's weapon patch to execute native firearm logic.
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }
@@ -184,12 +184,12 @@ public final class ShootToThrillCompat {
     public static final class Scope {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return CameraController.topDownActive();
+            return Bridge.topDownActive();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (CameraController.topDownActive()) {
+            if (Bridge.topDownActive()) {
                 result = false;
             }
         }

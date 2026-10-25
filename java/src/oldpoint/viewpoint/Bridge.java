@@ -6,7 +6,10 @@ import viewpoint.core.Frame;
 import zombie.characters.IsoGameCharacter;
 import zombie.iso.Vector2;
 
-/** A playable, player-following isometric camera inside Viewpoint's renderer. */
+/**
+ * Public Lua and Hook entry points for OldPoint's player-following camera. Patch bodies are inlined into foreign
+ * packages: keep calls to package-private modules behind this public facade.
+ */
 @Exposer.LuaClass(name = "OldPointBridge")
 public final class Bridge {
     static {
