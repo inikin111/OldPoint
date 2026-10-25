@@ -9,18 +9,13 @@ import me.zed_0xff.zombie_buddy.Exposer;
 import me.zed_0xff.zombie_buddy.Patch;
 import viewpoint.core.Frame;
 import viewpoint.core.View;
-import viewpoint.input.FreeCam;
 import viewpoint.input.Look;
-import viewpoint.platform.Keys;
-import viewpoint.platform.LiveSettings;
-import viewpoint.platform.SettingsWindow;
 
 import zombie.characters.IsoGameCharacter;
 import zombie.core.Core;
 
 import zombie.iso.Vector2;
 import zombie.ui.UIManager;
-import zombie.GameTime;
 
 /** A playable, player-following isometric camera inside Viewpoint's renderer. */
 @Exposer.LuaClass(name = "OldPointBridge")
@@ -29,39 +24,6 @@ public final class Bridge {
         System.out.println("[OldPoint] loaded build 0.6.151: selected-wall decoration hiding");
     }
 
-    private static volatile boolean enabled = true;
-    private static volatile boolean topDown;
-    private static float savedYaw;
-    private static float savedPitch;
-    private static boolean savedCursor;
-    private static volatile float orbitYaw = Layout.YAW;
-    private static volatile boolean nativeFixedView;
-    private static float freeOrbitYaw = Layout.YAW;
-    private static volatile float rememberedOrbitYaw = Layout.YAW;
-    private static volatile boolean directEntryRequested;
-    private static volatile long directEntryRequestedAt;
-    private static int automaticEntryMode;
-    private static long automaticEntryAt;
-    private static float automaticEntryYaw = Float.NaN;
-
-    private enum EntryMode {
-        ORIGINAL,
-        FIRST_PERSON,
-        THIRD_PERSON
-    }
-
-    private static EntryMode directReturnMode;
-    private static EntryMode overheadOrigin = EntryMode.THIRD_PERSON;
-    private static boolean directReturnThirdPerson;
-    private static boolean rotating;
-    private static volatile int rotationKey = zombie.input.Mouse.MMB;
-    private static volatile boolean stepRotation, smoothStepRotation = true;
-    private static volatile int stepDegrees = 90, leftRotationKey, rightRotationKey;
-    private static boolean leftRotationHeld, rightRotationHeld;
-    private static boolean reported;
-    private static Field cursorMode;
-    private static Field onFootMode;
-    private static Field seatedMode;
     private static Field drawerFrame;
     private static Field drawerEye;
     private static Field drawerDirection;
@@ -89,18 +51,11 @@ public final class Bridge {
     private Bridge() {}
 
     public static void setEnabled(boolean value) {
-        if (!value) {
-            directEntryRequested = false;
-            directReturnMode = null;
-        }
-        if (!value && topDown) {
-            leaveTopDown();
-        }
-        enabled = value;
+        CameraController.setEnabled(value);
     }
 
     public static boolean topDownActive() {
-        return enabled && topDown && View.enabled && !FreeCam.active;
+        return CameraController.topDownActive();
     }
 
     public static void setZoomLimits(double minimum, double maximum) {
@@ -132,14 +87,11 @@ public final class Bridge {
     }
 
     public static void setAutomaticCameraModes(double enter, double leave, double driver, double leaveDriver) {
-        automaticEntryMode = 0;
-        AutomaticCamera.configure(enter, leave, driver, leaveDriver);
+        CameraController.setAutomaticCameraModes(enter, leave, driver, leaveDriver);
     }
 
     public static void resetAutomaticCamera() {
-        AutomaticCamera.reset();
-        automaticEntryMode = 0;
-        automaticEntryYaw = Float.NaN;
+        CameraController.resetAutomaticCamera();
     }
 
     public static void updateAutomaticCamera() {
@@ -160,207 +112,32 @@ public final class Bridge {
 
     /** 0 unchanged, 1 first person, 2 third person, 3 remembered overhead, 4 vanilla. */
     public static boolean requestCameraMode(int mode) {
-        var player = zombie.characters.IsoPlayer.players[0];
-        if (mode < 1
-                || mode > 4
-                || player == null
-                || player.isDead()
-                || FreeCam.active
-                || mode == 3 && !enabled
-                || UIManager.isModalVisible()
-                || SettingsWindow.shown()
-                || GameTime.isGamePaused()) {
-            return false;
-        }
-        automaticEntryMode = 0;
-        automaticEntryYaw = Float.NaN;
-        if (mode == 3 && topDownActive()) {
-            return true;
-        }
-        try {
-            if (mode == 4) {
-                directEntryRequested = false;
-                if (topDown) {
-                    float yaw = rotating ? Look.yaw : orbitYaw;
-                    if (!nativeFixedView && Float.isFinite(yaw)) {
-                        rememberedOrbitYaw = yaw;
-                    }
-                    leaveTopDown();
-                }
-                if (View.enabled) {
-                    var exit =
-                            Class.forName("viewpoint.FP")
-                                    .getDeclaredMethod("switchView", IsoGameCharacter.class, boolean.class);
-                    exit.setAccessible(true);
-                    exit.invoke(null, player, false);
-                }
-                return true;
-            }
-            if (!View.enabled) {
-                directEntryRequested = false;
-                automaticEntryMode = mode;
-                automaticEntryAt = System.nanoTime();
-                // Preserve Viewpoint's normal permission, onboarding and activation checks.
-                var cycle = Class.forName("viewpoint.FP").getDeclaredMethod("cycleView");
-                cycle.setAccessible(true);
-                cycle.invoke(null);
-                return true;
-            }
-            if (mode == 3) {
-                directReturnMode = currentMode();
-                directReturnThirdPerson = View.thirdPerson;
-                enterOverhead(true);
-            } else {
-                directEntryRequested = false;
-                if (topDown) {
-                    float yaw = rotating ? Look.yaw : orbitYaw;
-                    if (!nativeFixedView && Float.isFinite(yaw)) {
-                        rememberedOrbitYaw = yaw;
-                    }
-                    leaveTopDown();
-                }
-                setThirdPersonMode(mode == 2);
-            }
-            return true;
-        } catch (ReflectiveOperationException error) {
-            automaticEntryMode = 0;
-            report(error);
-            return false;
-        }
+        return CameraController.requestCameraMode(mode);
     }
 
     static boolean requestCameraModeFacing(int mode, float yaw) {
-        if (mode != 1 && mode != 2) {
-            return false;
-        }
-        if (!requestCameraMode(mode)) {
-            return false;
-        }
-        if (!Float.isFinite(yaw)) {
-            return true;
-        }
-        if (View.enabled && View.thirdPerson == (mode == 2) && !topDownActive()) {
-            faceEntryCamera(yaw);
-        } else {
-            automaticEntryYaw = yaw;
-        }
-        return true;
+        return CameraController.requestCameraModeFacing(mode, yaw);
     }
 
     static boolean requestAimCameraMode(int mode, float yaw) {
-        if (mode < 1 || mode > 4 || !requestCameraMode(mode)) {
-            return false;
-        }
-        if (!Float.isFinite(yaw)) {
-            return true;
-        }
-        if (mode == 1 || mode == 2) {
-            if (View.enabled && !topDownActive()) {
-                faceEntryCamera(yaw);
-            } else {
-                automaticEntryYaw = yaw;
-            }
-        } else {
-            faceCharacter(yaw);
-            if (mode == 3 && !View.enabled) {
-                automaticEntryYaw = yaw;
-            }
-        }
-        return true;
-    }
-
-    private static void faceCharacter(float yaw) {
-        var player = zombie.characters.IsoPlayer.players[0];
-        if (player != null && player.getVehicle() == null) {
-            player.setTargetAndCurrentDirection((float) Math.cos(yaw), (float) Math.sin(yaw));
-        }
-    }
-
-    private static void faceEntryCamera(float yaw) {
-        yaw = Look.wrap(yaw);
-        Look.yaw = yaw;
-        Look.pitch = 0;
-        Look.hold(yaw, 0);
-        Look.turnTo(Float.NaN);
-        Look.behind(Float.NaN, Float.NaN, false);
-        faceCharacter(yaw);
-        automaticEntryYaw = Float.NaN;
+        return CameraController.requestAimCameraMode(mode, yaw);
     }
 
     public static boolean nativeFixedView() {
-        return nativeFixedView;
+        return CameraController.nativeFixedView();
     }
 
     public static void setRotationKey(double value) {
-        int key = Double.isFinite(value) ? (int) value : zombie.input.Mouse.MMB;
-        rotationKey =
-                key >= 0 && key < 512 || key >= zombie.input.Mouse.BTN_OFFSET && key < zombie.input.Mouse.BTN_OFFSET + 8
-                        ? key
-                        : zombie.input.Mouse.MMB;
-    }
-
-    private static boolean rotationHeld() {
-        return keyHeld(rotationKey);
-    }
-
-    private static boolean keyHeld(int key) {
-        if (key >= zombie.input.Mouse.BTN_OFFSET) {
-            int button = key - zombie.input.Mouse.BTN_OFFSET;
-            return button < org.lwjglx.input.Mouse.getButtonCount() && org.lwjglx.input.Mouse.isButtonDown(button);
-        }
-        return key > 0 && zombie.input.GameKeyboard.isKeyDown(key);
+        CameraController.setRotationKey(value);
     }
 
     public static void configureStepRotation(
             boolean enabled, double degrees, boolean smooth, double left, double right) {
-        stepRotation = enabled;
-        stepDegrees = degrees == 45 ? 45 : degrees == 180 ? 180 : 90;
-        smoothStepRotation = smooth;
-        leftRotationKey = validStepKey(left);
-        rightRotationKey = validStepKey(right);
-    }
-
-    private static int validStepKey(double value) {
-        if (!Double.isFinite(value)) {
-            return 0;
-        }
-        int key = (int) value;
-        return key > 0 && (key < 512 || key >= zombie.input.Mouse.BTN_OFFSET && key < zombie.input.Mouse.BTN_OFFSET + 8)
-                ? key
-                : 0;
+        CameraController.configureStepRotation(enabled, degrees, smooth, left, right);
     }
 
     public static void updateStepRotation(boolean inputAllowed) {
-        boolean left = keyHeld(leftRotationKey), right = keyHeld(rightRotationKey);
-        boolean pressLeft = left && !leftRotationHeld, pressRight = right && !rightRotationHeld;
-        leftRotationHeld = left;
-        rightRotationHeld = right;
-        if (!inputAllowed
-                || !stepRotation
-                || !topDownActive()
-                || nativeFixedView
-                || GameTime.isGamePaused()
-                || Core.getInstance().isDoingTextEntry()
-                || UIManager.isModalVisible()
-                || SettingsWindow.shown()
-                || pressLeft == pressRight) {
-            return;
-        }
-        float amount = (float) Math.toRadians(stepDegrees) * (pressLeft ? -1 : 1);
-        if (rotating && Float.isFinite(Look.yaw)) {
-            orbitYaw = Look.yaw;
-        }
-        rotating = false;
-        OrbitInput.reset();
-        if (smoothStepRotation) {
-            ResetMotion.step(orbitYaw, amount);
-        } else {
-            orbitYaw = ResetMotion.targetOr(orbitYaw) + amount;
-            ResetMotion.cancel();
-            rememberedOrbitYaw = orbitYaw;
-            freeOrbitYaw = orbitYaw;
-        }
-        Look.yaw = orbitYaw;
+        CameraController.updateStepRotation(inputAllowed);
     }
 
     public static void setVisionRange(boolean enabled, double indicator) {
@@ -390,32 +167,19 @@ public final class Bridge {
     }
 
     public static boolean improvedAimVisible() {
-        return !rotating && ImprovedAim.showing();
+        return CameraController.improvedAimVisible();
     }
 
     public static float overheadPitch() {
-        return nativeFixedView ? Layout.NATIVE_PITCH : Layout.PITCH;
+        return CameraController.overheadPitch();
     }
 
     public static void setNativeFixedView(boolean value) {
-        if (value == nativeFixedView) {
-            return;
-        }
-        ResetMotion.cancel();
-        if (value) {
-            freeOrbitYaw = rotating ? Look.yaw : orbitYaw;
-        }
-        nativeFixedView = value;
-        orbitYaw = value ? Layout.YAW : freeOrbitYaw;
-        rotating = false;
-        Interior.clear();
-        if (topDownActive()) {
-            syncCursor();
-        }
+        CameraController.setNativeFixedView(value);
     }
 
     public static boolean keepAimCursor() {
-        return topDownActive() && !rotating && !ImprovedAim.showing();
+        return CameraController.keepAimCursor();
     }
 
     public static void pressWorldContext() {
@@ -447,313 +211,40 @@ public final class Bridge {
     }
 
     private static void report(Throwable error) {
-        if (!reported) {
-            reported = true;
-            System.out.println("[OldPoint] compatibility error: " + error);
-            error.printStackTrace(System.out);
-        }
-    }
-
-    private static Field cursorField() throws ReflectiveOperationException {
-        if (cursorMode == null) {
-            cursorMode = Class.forName("viewpoint.FP").getDeclaredField("cursorMode");
-            cursorMode.setAccessible(true);
-        }
-        return cursorMode;
-    }
-
-    private static void leaveTopDown() {
-        if (topDown) {
-            Zoom.remember();
-            float yaw = rotating ? Look.yaw : orbitYaw;
-            if (!nativeFixedView && Float.isFinite(yaw)) {
-                rememberedOrbitYaw = yaw;
-            }
-        }
-        ResetMotion.cancel();
-        directReturnMode = null;
-        OrbitInput.reset();
-        TreeClearing.clear();
-        VisionFade.clear();
-        VisionSystem.clearSight();
-        topDown = false;
-        rotating = false;
-        Look.yaw = savedYaw;
-        Look.pitch = savedPitch;
-        try {
-            cursorField().setBoolean(null, savedCursor);
-        } catch (ReflectiveOperationException error) {
-            report(error);
-        }
-        Interior.clear();
-
-        Pointer.clear();
+        CompatibilityErrors.report(error);
     }
 
     public static boolean handleViewKey() {
-        if (!enabled || FreeCam.active) {
-            return false;
-        }
-        if (!Keys.THIRD_PERSON.pressed()) {
-            return topDownActive();
-        }
-        automaticEntryMode = 0;
-        automaticEntryYaw = Float.NaN;
-        if (topDown) {
-            leaveTopDown();
-            setThirdPersonMode(false);
-            System.out.println("[OldPoint] camera: first person");
-        } else if (View.thirdPerson) {
-            enterOverhead(true);
-        } else {
-            setThirdPersonMode(true);
-            System.out.println("[OldPoint] camera: third person");
-        }
-        // pressed() calls eatKeyPress, but another pressed() in this same frame
-        // can still see the event. Skip poll on EVERY handled transition so
-        // Viewpoint cannot toggle the selected setting a second time.
-        return true;
+        return CameraController.handleViewKey();
     }
 
-    /** All overhead entry paths restore the last user orbit. */
-    private static void enterOverhead(boolean restore) {
-        if (!topDown) {
-            try {
-                overheadOrigin = currentMode();
-                ShootToThrillCompat.enteringOverhead();
-                savedCursor = cursorField().getBoolean(null);
-                savedYaw = Look.yaw;
-                savedPitch = Look.pitch;
-                setThirdPersonMode(true);
-                topDown = true;
-                if (restore) {
-                    Zoom.restore();
-                } else {
-                    Zoom.reset();
-                }
-                Pointer.closeInteraction();
-            } catch (ReflectiveOperationException error) {
-                report(error);
-                return;
-            }
-        }
-        ResetMotion.cancel();
-        OrbitInput.reset();
-        orbitYaw = restore && !nativeFixedView ? rememberedOrbitYaw : Layout.YAW;
-        rotating = false;
-        Look.yaw = orbitYaw;
-        Look.pitch = Layout.NATIVE_PITCH;
-        Interior.clear();
-        syncCursor();
-        System.out.println(
-                "[OldPoint] overhead entry: "
-                        + (restore ? "restore user orbit" : "native orientation")
-                        + ", yaw="
-                        + orbitYaw
-                        + ", pitch="
-                        + Layout.NATIVE_PITCH);
-    }
-
+    /** Toggle remembered overhead and return to the entry view on the next press. */
     public static void enterOverheadRemembered() {
-        var player = zombie.characters.IsoPlayer.players[0];
-        if (!enabled
-                || FreeCam.active
-                || player == null
-                || player.isDead()
-                || UIManager.isModalVisible()
-                || SettingsWindow.shown()
-                || GameTime.isGamePaused()) {
-            return;
-        }
-        automaticEntryMode = 0;
-        automaticEntryYaw = Float.NaN;
-        if (topDownActive()) {
-            returnFromOverhead(player);
-            return;
-        }
-        directReturnMode = currentMode();
-        directReturnThirdPerson = View.thirdPerson;
-        if (View.enabled) {
-            enterOverhead(true);
-            return;
-        }
-        try {
-            directEntryRequested = true;
-            directEntryRequestedAt = System.nanoTime();
-            // Ask Viewpoint to enter through its normal onboarding/build/split-screen checks.
-            var cycle = Class.forName("viewpoint.FP").getDeclaredMethod("cycleView");
-            cycle.setAccessible(true);
-            cycle.invoke(null);
-        } catch (ReflectiveOperationException error) {
-            directEntryRequested = false;
-            directReturnMode = null;
-            report(error);
-        }
-    }
-
-    private static EntryMode currentMode() {
-        return !View.enabled ? EntryMode.ORIGINAL : View.thirdPerson ? EntryMode.THIRD_PERSON : EntryMode.FIRST_PERSON;
-    }
-
-    private static void returnFromOverhead(IsoGameCharacter player) {
-        float exitYaw = rotating ? Look.yaw : orbitYaw;
-        if (!nativeFixedView && Float.isFinite(exitYaw)) {
-            rememberedOrbitYaw = exitYaw;
-        }
-        EntryMode target = directReturnMode != null ? directReturnMode : overheadOrigin;
-        boolean originalThird = directReturnThirdPerson;
-        if (target == EntryMode.ORIGINAL) {
-            try {
-                var exit =
-                        Class.forName("viewpoint.FP")
-                                .getDeclaredMethod("switchView", IsoGameCharacter.class, boolean.class);
-                exit.setAccessible(true);
-                exit.invoke(null, player, false);
-            } catch (ReflectiveOperationException error) {
-                report(error);
-                return;
-            }
-        }
-        leaveTopDown();
-        setThirdPersonMode(target == EntryMode.THIRD_PERSON || target == EntryMode.ORIGINAL && originalThird);
-        System.out.println("[OldPoint] direct overhead return: " + target);
+        CameraController.enterOverheadRemembered();
     }
 
     public static void resetOverheadOrientation() {
-        if (!topDownActive() || UIManager.isModalVisible() || SettingsWindow.shown() || GameTime.isGamePaused()) {
-            return;
-        }
-        rememberedOrbitYaw = Layout.YAW;
-        freeOrbitYaw = Layout.YAW;
-        if (!nativeFixedView) {
-            if (rotating && Float.isFinite(Look.yaw)) {
-                orbitYaw = Look.yaw;
-            }
-            rotating = false;
-            OrbitInput.reset();
-            ResetMotion.start(orbitYaw);
-            Interior.clear();
-        } else {
-            enterOverhead(false);
-        }
+        CameraController.resetOverheadOrientation();
     }
 
     public static void setThirdPersonMode(boolean value) {
-        try {
-            if (onFootMode == null) {
-                Class<?> settings = Class.forName("viewpoint.camera.CameraSettings");
-                onFootMode = settings.getDeclaredField("ON_FOOT");
-                seatedMode = settings.getDeclaredField("SEATED");
-                onFootMode.setAccessible(true);
-                seatedMode.setAccessible(true);
-            }
-            var player = zombie.characters.IsoPlayer.players[0];
-            Field mode = player != null && player.getVehicle() != null ? seatedMode : onFootMode;
-            ((LiveSettings.Toggle) mode.get(null)).set(value);
-            // We skip poll for the handled key, so commit both pieces of state
-            // and perform the normal aim reset here, exactly once.
-            if (View.thirdPerson != value) {
-                View.thirdPerson = value;
-                viewpoint.input.CrosshairAim.switched();
-            }
-        } catch (ReflectiveOperationException error) {
-            report(error);
-        }
+        CameraController.setThirdPersonMode(value);
     }
 
     public static void afterToggle() {
-        if (automaticEntryMode != 0) {
-            if (System.nanoTime() - automaticEntryAt > 10_000_000_000L) {
-                automaticEntryMode = 0;
-                automaticEntryYaw = Float.NaN;
-            } else if (View.enabled) {
-                int mode = automaticEntryMode;
-                automaticEntryMode = 0;
-                if (mode == 3) {
-                    directReturnMode = EntryMode.ORIGINAL;
-                    directReturnThirdPerson = false;
-                    enterOverhead(true);
-                    if (Float.isFinite(automaticEntryYaw)) {
-                        faceCharacter(automaticEntryYaw);
-                        automaticEntryYaw = Float.NaN;
-                    }
-                } else {
-                    setThirdPersonMode(mode == 2);
-                    if ((mode == 1 || mode == 2) && Float.isFinite(automaticEntryYaw)) {
-                        faceEntryCamera(automaticEntryYaw);
-                    }
-                }
-            }
-        }
-        if (directEntryRequested && System.nanoTime() - directEntryRequestedAt > 10_000_000_000L) {
-            directEntryRequested = false;
-            directReturnMode = null;
-        }
-        if (directEntryRequested && View.enabled) {
-            directEntryRequested = false;
-            enterOverhead(true);
-        }
-        if (topDown && !View.enabled) {
-            leaveTopDown();
-            setThirdPersonMode(false);
-            View.thirdPerson = false;
-        }
+        CameraController.afterToggle();
     }
 
     public static void syncCursor() {
-        if (!topDownActive()) {
-            return;
-        }
-        boolean held =
-                !nativeFixedView
-                        && !stepRotation
-                        && rotationHeld()
-                        && !UIManager.isModalVisible()
-                        && !GameTime.isGamePaused()
-                        && !SettingsWindow.shown();
-        if (held && ResetMotion.active()) {
-            ResetMotion.cancel();
-            OrbitInput.reset();
-        }
-        if (nativeFixedView) {
-            orbitYaw = Layout.YAW;
-        } else if (rotating) {
-            orbitYaw = Look.yaw;
-            if (Float.isFinite(orbitYaw)) {
-                rememberedOrbitYaw = orbitYaw;
-            }
-        }
-        rotating = held;
-        Look.yaw = orbitYaw;
-        Look.pitch = overheadPitch();
-        Look.wantCapture = held;
-        try {
-            cursorField().setBoolean(null, !held);
-        } catch (ReflectiveOperationException error) {
-            report(error);
-        }
+        CameraController.syncCursor();
     }
 
     public static void finishOrbitInput() {
-        if (!topDownActive()) {
-            OrbitInput.reset();
-            return;
-        }
-        orbitYaw = OrbitInput.read(orbitYaw, rotating && !nativeFixedView);
-        if (rotating && !nativeFixedView && Float.isFinite(orbitYaw)) {
-            rememberedOrbitYaw = orbitYaw;
-        }
-        Look.yaw = orbitYaw;
-        Look.pitch = overheadPitch();
+        CameraController.finishOrbitInput();
     }
 
     public static boolean nativeMove(Object value) {
-        if (!topDownActive()) {
-            return false;
-        }
-        Vector2 vector = (Vector2) value;
-        vector.rotate(orbitYaw - Layout.YAW);
-        return true;
+        return CameraController.nativeMove(value);
     }
 
     public static boolean nativeAim(Object value) {
@@ -772,19 +263,7 @@ public final class Bridge {
             return false;
         }
         IsoGameCharacter player = (IsoGameCharacter) character;
-        if (ResetMotion.active()) {
-            orbitYaw = ResetMotion.advance(GameTime.isGamePaused());
-        }
-        if (nativeFixedView) {
-            orbitYaw = Layout.YAW;
-        } else if (rotating) {
-            orbitYaw = Look.yaw;
-            if (Float.isFinite(orbitYaw)) {
-                rememberedOrbitYaw = orbitYaw;
-            }
-        }
-        Look.yaw = orbitYaw;
-        Look.pitch = overheadPitch();
+        float orbitYaw = CameraController.captureYaw();
         frame.viewYaw = orbitYaw;
         frame.viewPitch = overheadPitch();
         frame.eyeX = -(player.getX() - frame.camX);
@@ -950,9 +429,11 @@ public final class Bridge {
             return false;
         }
         CameraState state = drawing.get();
-        result[0] = state == null ? (float) (-Math.cos(orbitYaw) * Math.cos(overheadPitch())) : state.dx;
+        result[0] =
+                state == null ? (float) (-Math.cos(CameraController.orbitYaw()) * Math.cos(overheadPitch())) : state.dx;
         result[1] = state == null ? (float) Math.sin(overheadPitch()) : state.dy;
-        result[2] = state == null ? (float) (-Math.sin(orbitYaw) * Math.cos(overheadPitch())) : state.dz;
+        result[2] =
+                state == null ? (float) (-Math.sin(CameraController.orbitYaw()) * Math.cos(overheadPitch())) : state.dz;
         return true;
     }
 
