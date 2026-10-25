@@ -290,7 +290,7 @@ public final class RoofModels {
         drawing.remove();
         // Default shadow shaders lack uOPInterior; Iris shadow draws set it to
         // zero. Retain roof shadow casters to avoid changing room illumination.
-        if (!Bridge.drawTopDown()
+        if (!CameraDrawing.drawTopDown()
                 || !program.has("uOPInterior")
                 || GL20.glGetUniformi(program.id(), program.location("uOPInterior")) == 0) {
             return;

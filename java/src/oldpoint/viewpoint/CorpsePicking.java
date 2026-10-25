@@ -33,7 +33,7 @@ public final class CorpsePicking {
 
     public static IsoDeadBody current() {
         Hover value = hover;
-        if (!Bridge.keepAimCursor()
+        if (!CameraController.keepAimCursor()
                 || Pointer.overUI()
                 || value == null
                 || Math.abs(value.x - Mouse.getXA()) > 3
@@ -53,7 +53,7 @@ public final class CorpsePicking {
     }
 
     public static boolean checkPicked() {
-        if (!Bridge.topDownActive() || Pointer.overUI()) {
+        if (!CameraController.topDownActive() || Pointer.overUI()) {
             return false;
         }
         var picked = UIManager.getPicked();
@@ -81,7 +81,7 @@ public final class CorpsePicking {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
             var picked = UIManager.getPicked();
-            if (Bridge.topDownActive()
+            if (CameraController.topDownActive()
                     && picked != null
                     && picked.tile instanceof IsoDeadBody body
                     && UpperFloorObjects.hidden(body)) {

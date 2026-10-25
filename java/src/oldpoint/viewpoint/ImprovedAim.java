@@ -57,7 +57,7 @@ public final class ImprovedAim {
     public static boolean showing() {
         var player = IsoPlayer.getInstance();
         return enabled
-                && Bridge.topDownActive()
+                && CameraController.topDownActive()
                 && !zombie.GameTime.isGamePaused()
                 && player != null
                 && player.isAiming()
@@ -88,7 +88,7 @@ public final class ImprovedAim {
             killUntil = 0;
             killTarget = null;
         }
-        if (local == null || !Bridge.topDownActive()) {
+        if (local == null || !CameraController.topDownActive()) {
             targetController = null;
             targetAt = 0;
         }
@@ -134,7 +134,7 @@ public final class ImprovedAim {
     }
 
     public static void nativeTargets(Object value) {
-        if (!enabled || !Bridge.topDownActive() || !(value instanceof BallisticsController controller)) {
+        if (!enabled || !CameraController.topDownActive() || !(value instanceof BallisticsController controller)) {
             return;
         }
         var player = IsoPlayer.getInstance();
@@ -156,7 +156,10 @@ public final class ImprovedAim {
     }
 
     public static void hit(Object target, Object attacker, Object bodyPart, Object weapon) {
-        if (enabled && Bridge.topDownActive() && target instanceof IsoZombie zombie && shot(attacker, weapon)) {
+        if (enabled
+                && CameraController.topDownActive()
+                && target instanceof IsoZombie zombie
+                && shot(attacker, weapon)) {
             long now = System.nanoTime();
             headHit = bodyPart == BodyPartType.Head;
             hitUntil = now + 100_000_000L;
@@ -176,7 +179,7 @@ public final class ImprovedAim {
 
     public static void killed(Object target, Object attacker, Object weapon) {
         if (!enabled
-                || !Bridge.topDownActive()
+                || !CameraController.topDownActive()
                 || !(target instanceof IsoZombie zombie)
                 || attacker != IsoPlayer.getInstance()) {
             return;
@@ -233,7 +236,7 @@ public final class ImprovedAim {
     }
 
     public static void draw() {
-        if (!Bridge.improvedAimVisible()) {
+        if (!CameraController.improvedAimVisible()) {
             spreadAt = 0;
             return;
         }

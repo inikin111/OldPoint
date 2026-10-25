@@ -88,10 +88,14 @@ public final class OverheadWeather {
     public static void uniforms(Object value) {
         GlProgram program = (GlProgram) value;
         if (program.has(ACTIVE)) {
-            program.set(ACTIVE, Bridge.weatherActive());
+            program.set(ACTIVE, CameraDrawing.weatherActive());
         }
         if (program.has(PLAYER)) {
-            program.set(PLAYER, Bridge.weatherAnchor(0), Bridge.weatherAnchor(1), Bridge.weatherAnchor(2));
+            program.set(
+                    PLAYER,
+                    CameraDrawing.weatherAnchor(0),
+                    CameraDrawing.weatherAnchor(1),
+                    CameraDrawing.weatherAnchor(2));
         }
     }
 
@@ -186,12 +190,12 @@ public final class OverheadWeather {
         if (previous != program) {
             glUseProgram(program);
         }
-        glUniform1f(location, Bridge.weatherActive());
+        glUniform1f(location, CameraDrawing.weatherActive());
         glUniform3f(
                 veil ? veilPlayer : bankPlayer,
-                Bridge.weatherAnchor(0),
-                Bridge.weatherAnchor(1),
-                Bridge.weatherAnchor(2));
+                CameraDrawing.weatherAnchor(0),
+                CameraDrawing.weatherAnchor(1),
+                CameraDrawing.weatherAnchor(2));
         if (previous != program) {
             glUseProgram(previous);
         }

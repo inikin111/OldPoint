@@ -29,7 +29,7 @@ public final class PickTargets {
     private PickTargets() {}
 
     public static IsoObject resolve(IsoObject original) {
-        if (!Bridge.keepAimCursor()) {
+        if (!CameraController.keepAimCursor()) {
             return original;
         }
         var vehicle = VehiclePicking.current();

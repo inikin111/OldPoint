@@ -15,7 +15,7 @@ public final class AimCamera {
 
     public static boolean hidePointer() {
         var player = IsoPlayer.getInstance();
-        return Bridge.topDownActive()
+        return CameraController.topDownActive()
                 && player != null
                 && player.isAiming()
                 && !player.isDead()
@@ -62,7 +62,7 @@ public final class AimCamera {
         public static boolean enter() {
             // Viewpoint clears the native rightClick offsets here. Keep vanilla's
             // already updated result in overhead; its own option still applies.
-            return Bridge.topDownActive();
+            return CameraController.topDownActive();
         }
     }
 
@@ -70,7 +70,7 @@ public final class AimCamera {
     public static final class NativeCursorPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (Bridge.keepAimCursor()) {
+            if (CameraController.keepAimCursor()) {
                 result = false;
             }
         }

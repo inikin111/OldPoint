@@ -22,13 +22,13 @@ public final class UpperFloorObjects {
     public static boolean hidden(Frame frame, IsoMovingObject object) {
         return object != null
                 && object != zombie.characters.IsoPlayer.getInstance()
-                && Bridge.frameTopDown(frame)
+                && CameraDrawing.frameTopDown(frame)
                 && Interior.hidePoint(frame.scene, object.getX(), object.getY(), (int) Math.floor(object.getZ()));
     }
 
     public static boolean hidden(Frame frame, IsoGridSquare square) {
         return square != null
-                && Bridge.frameTopDown(frame)
+                && CameraDrawing.frameTopDown(frame)
                 && Interior.hidePoint(frame.scene, square.getX() + 0.5f, square.getY() + 0.5f, square.getZ());
     }
 
@@ -135,7 +135,7 @@ public final class UpperFloorObjects {
     public static final class PickPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) IsoObject result) {
-            if (result == null || !Bridge.topDownActive()) {
+            if (result == null || !CameraController.topDownActive()) {
                 return;
             }
             var square = result.getSquare();

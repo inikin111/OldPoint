@@ -18,7 +18,7 @@ public final class IndoorWeather {
     /** Capture with the camera frame on the game thread; no live world access while drawing. */
     public static void snapshot(Frame frame, Object character) {
         boolean hide = false;
-        if (Bridge.topDownActive() && !frame.onCamera && character instanceof IsoGameCharacter player) {
+        if (CameraController.topDownActive() && !frame.onCamera && character instanceof IsoGameCharacter player) {
             var square = player.getCurrentSquare();
             hide = square != null && square.getRoom() != null && !square.isOutside();
         }
@@ -30,7 +30,7 @@ public final class IndoorWeather {
     }
 
     public static boolean hidden(FrameContext frame) {
-        return Bridge.drawTopDown() && Boolean.TRUE.equals(indoors.get(frame.scene));
+        return CameraDrawing.drawTopDown() && Boolean.TRUE.equals(indoors.get(frame.scene));
     }
 
     // Let falling() execute its native due reset and early return, before any GL state changes.

@@ -44,7 +44,7 @@ public final class VisionIndicator {
     }
 
     public static void draw() {
-        if (!VisionSystem.active() || !Bridge.drawTopDown() || failed || SettingsWindow.shown()) {
+        if (!VisionSystem.active() || !CameraDrawing.drawTopDown() || failed || SettingsWindow.shown()) {
             return;
         }
         try {

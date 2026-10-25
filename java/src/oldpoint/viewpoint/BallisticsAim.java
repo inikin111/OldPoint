@@ -71,7 +71,7 @@ public final class BallisticsAim {
         }
         Scratch work = scratch.get();
         Vector3f position = work.position, direction = work.direction;
-        if (!Bridge.topDownActive()
+        if (!CameraController.topDownActive()
                 || !(player.getPrimaryHandItem() instanceof HandWeapon weapon)
                 || !weapon.isRanged()
                 || player.primaryHandModel == null
@@ -107,7 +107,7 @@ public final class BallisticsAim {
 
     /** Feed the latest native body hit to updateAimingVector, including prone targets. */
     public static void refreshTarget(Object value) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return;
         }
         BallisticsController controller = (BallisticsController) value;

@@ -37,7 +37,7 @@ public final class WorldContext {
 
     public static IsoGridSquare groundSquare() {
         var player = IsoPlayer.getInstance();
-        if (!Bridge.topDownActive() || Pointer.overUI() || player == null || IsoWorld.instance == null) {
+        if (!CameraController.topDownActive() || Pointer.overUI() || player == null || IsoWorld.instance == null) {
             return null;
         }
         int floor = (int) Math.floor(player.getZ());
@@ -50,7 +50,7 @@ public final class WorldContext {
 
     public static void press() {
         clear();
-        if (!Bridge.keepAimCursor() || Pointer.overUI()) {
+        if (!CameraController.keepAimCursor() || Pointer.overUI()) {
             return;
         }
         pressed = PickTargets.resolve(null);
@@ -71,7 +71,7 @@ public final class WorldContext {
     }
 
     public static boolean fresh() {
-        return Bridge.topDownActive()
+        return CameraController.topDownActive()
                 && pressed != null
                 && pressed.getSquare() != null
                 && IsoWorld.instance != null
@@ -114,7 +114,7 @@ public final class WorldContext {
     }
 
     public static boolean inMenu() {
-        return Bridge.topDownActive() && menuObject != null;
+        return CameraController.topDownActive() && menuObject != null;
     }
 
     public static BaseVehicle vehicle() {
@@ -136,7 +136,7 @@ public final class WorldContext {
     }
 
     public static void draw(IsoGridSquare square, boolean valid) {
-        if (square == null || !Bridge.topDownActive() || Pointer.overUI()) {
+        if (square == null || !CameraController.topDownActive() || Pointer.overUI()) {
             return;
         }
         double x = square.getX(), y = square.getY(), z = Pointer.groundHeight(square.getZ() + 0.015);
@@ -167,7 +167,7 @@ public final class WorldContext {
     }
 
     public static boolean walkCursor(IsoCell cell, int player) {
-        if (!Bridge.topDownActive() || player != 0) {
+        if (!CameraController.topDownActive() || player != 0) {
             return false;
         }
         var drag = cell.getDrag(player);
@@ -199,7 +199,7 @@ public final class WorldContext {
     public static final class VehiclePatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) BaseVehicle result) {
-            if (Bridge.topDownActive()) {
+            if (CameraController.topDownActive()) {
                 result = inMenu() ? vehicle() : VehiclePicking.current();
             }
         }

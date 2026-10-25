@@ -67,7 +67,7 @@ final class AimModeCamera {
             float yaw = player.getDirectionAngleRadians();
             wasAiming = true;
             lastAimYaw = yaw;
-            if (onAim != 0 && Bridge.requestAimCameraMode(onAim, yaw)) {
+            if (onAim != 0 && CameraController.requestAimCameraMode(onAim, yaw)) {
                 // The transition was initiated while aiming; keep the stance
                 // even if Viewpoint's camera toggle reset it during this frame.
                 player.setIsAiming(true);
@@ -76,7 +76,7 @@ final class AimModeCamera {
         } else if (!aiming && wasAiming) {
             wasAiming = false;
             float yaw = Float.isFinite(lastAimYaw) ? lastAimYaw : player.getDirectionAngleRadians();
-            if (onRelease != 0 && Bridge.requestAimCameraMode(onRelease, yaw)) {
+            if (onRelease != 0 && CameraController.requestAimCameraMode(onRelease, yaw)) {
                 System.out.println("[OldPoint] aim camera: released, target=" + onRelease);
             }
             lastAimYaw = Float.NaN;

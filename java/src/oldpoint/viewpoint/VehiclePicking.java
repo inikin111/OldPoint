@@ -33,7 +33,7 @@ public final class VehiclePicking {
     }
 
     public static BaseVehicle current() {
-        if (!Bridge.keepAimCursor() || Pointer.overUI() || IsoWorld.instance == null) {
+        if (!CameraController.keepAimCursor() || Pointer.overUI() || IsoWorld.instance == null) {
             return null;
         }
         var cell = IsoWorld.instance.getCell();
@@ -87,7 +87,7 @@ public final class VehiclePicking {
     public static final class TargetPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) BaseVehicle result) {
-            if (Bridge.topDownActive()) {
+            if (CameraController.topDownActive()) {
                 result = VehiclePicking.current();
             }
         }
@@ -97,7 +97,7 @@ public final class VehiclePicking {
     public static final class ClickPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (!Bridge.topDownActive() || Pointer.overUI()) {
+            if (!CameraController.topDownActive() || Pointer.overUI()) {
                 return;
             }
             var picked = zombie.ui.UIManager.getPicked();

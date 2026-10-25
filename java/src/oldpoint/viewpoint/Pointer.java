@@ -182,7 +182,7 @@ public final class Pointer {
     }
 
     public static boolean aim(Object playerValue, Object vectorValue) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return false;
         }
         IsoGameCharacter player = (IsoGameCharacter) playerValue;
@@ -234,7 +234,7 @@ public final class Pointer {
     }
 
     public static boolean aimCharacter(Object value) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return false;
         }
         IsoGameCharacter player = (IsoGameCharacter) value;
@@ -253,7 +253,7 @@ public final class Pointer {
 
     /** Complete native attack-angle setup with the same direction used while aiming. */
     public static void alignMeleeAttack(zombie.characters.IsoPlayer player) {
-        if (!Bridge.topDownActive()
+        if (!CameraController.topDownActive()
                 || player != zombie.characters.IsoPlayer.getInstance()
                 || player.getPrimaryHandItem() instanceof HandWeapon weapon && weapon.isRanged()) {
             return;
@@ -377,6 +377,6 @@ public final class Pointer {
     }
 
     public static boolean showNativeAim() {
-        return Bridge.keepAimCursor() && !overUI();
+        return CameraController.keepAimCursor() && !overUI();
     }
 }

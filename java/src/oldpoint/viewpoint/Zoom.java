@@ -73,7 +73,7 @@ public final class Zoom {
     }
 
     public static synchronized boolean scroll(int player, int direction) {
-        if (!Bridge.topDownActive() || player != 0) {
+        if (!CameraController.topDownActive() || player != 0) {
             return false;
         }
         // The generic event/native-input route owns the wheel. Core may be
@@ -90,7 +90,7 @@ public final class Zoom {
     }
 
     private static boolean permitted() {
-        if (!Bridge.topDownActive() || UIManager.isModalVisible() || SettingsWindow.shown()) {
+        if (!CameraController.topDownActive() || UIManager.isModalVisible() || SettingsWindow.shown()) {
             return false;
         }
         int key = reservedModifier;
@@ -114,7 +114,7 @@ public final class Zoom {
     }
 
     public static synchronized void beginWheelCycle() {
-        wheelCycle.begin(Bridge.topDownActive() ? Mouse.getWheelState() : 0);
+        wheelCycle.begin(CameraController.topDownActive() ? Mouse.getWheelState() : 0);
     }
 
     public static synchronized void consumeUIWheel() {
@@ -138,7 +138,7 @@ public final class Zoom {
     }
 
     public static synchronized void wheel(double delta, boolean allowed) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return;
         }
         // Inside native UI dispatch, actual wheel consumption decides whether

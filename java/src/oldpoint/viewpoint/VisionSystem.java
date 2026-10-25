@@ -49,7 +49,7 @@ public final class VisionSystem {
     }
 
     public static boolean active() {
-        return enabled && Bridge.topDownActive();
+        return enabled && CameraController.topDownActive();
     }
 
     // Advice is inlined into Viewpoint; cross-package calls require public entries.

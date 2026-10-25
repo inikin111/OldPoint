@@ -53,7 +53,7 @@ public final class PlayerOutline {
 
     public static void begin(Frame frame, IsoGameCharacter character) {
         firstModel.remove();
-        if (enabled && Bridge.topDownActive() && character == IsoPlayer.getInstance()) {
+        if (enabled && CameraController.topDownActive() && character == IsoPlayer.getInstance()) {
             firstModel.set(frame.scene.models.count());
         }
     }
@@ -61,7 +61,7 @@ public final class PlayerOutline {
     public static void end(Frame frame, IsoGameCharacter character) {
         Integer first = firstModel.get();
         firstModel.remove();
-        if (enabled && first != null && Bridge.topDownActive() && character == IsoPlayer.getInstance()) {
+        if (enabled && first != null && CameraController.topDownActive() && character == IsoPlayer.getInstance()) {
             ranges.put(
                     frame.scene,
                     new Range(
@@ -74,7 +74,7 @@ public final class PlayerOutline {
     }
 
     public static void iris(Object pipeline, FrameContext frame) {
-        if (!enabled || failed || !Bridge.drawTopDown()) {
+        if (!enabled || failed || !CameraDrawing.drawTopDown()) {
             return;
         }
         try {
@@ -92,7 +92,7 @@ public final class PlayerOutline {
     }
 
     public static void draw(Object models) {
-        if (!enabled || failed || !Bridge.drawTopDown()) {
+        if (!enabled || failed || !CameraDrawing.drawTopDown()) {
             return;
         }
         try {

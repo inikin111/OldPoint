@@ -16,7 +16,7 @@ public final class OpeningModels {
 
     public static void begin(Frame frame) {
         first.remove();
-        if (Bridge.frameTopDown(frame)) {
+        if (CameraDrawing.frameTopDown(frame)) {
             first.set(frame.scene.models.count());
         }
     }

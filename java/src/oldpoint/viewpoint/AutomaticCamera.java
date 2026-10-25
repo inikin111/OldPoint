@@ -104,7 +104,7 @@ final class AutomaticCamera {
             previousDriverVehicle = driverVehicle;
             if (driverVehicle != null) {
                 target = driver;
-                if (target == 0 && View.enabled && !Bridge.topDownActive()) {
+                if (target == 0 && View.enabled && !CameraController.topDownActive()) {
                     target = View.thirdPerson ? 2 : 1;
                 }
                 reason = "entered driver seat";
@@ -126,8 +126,8 @@ final class AutomaticCamera {
         }
         if (target != 0
                 && (faceInside
-                        ? Bridge.requestCameraModeFacing(target, facingYaw)
-                        : Bridge.requestCameraMode(target))) {
+                        ? CameraController.requestCameraModeFacing(target, facingYaw)
+                        : CameraController.requestCameraMode(target))) {
             System.out.println("[OldPoint] automatic camera (experimental): " + reason + ", target=" + target);
         }
     }

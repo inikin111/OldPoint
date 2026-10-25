@@ -17,7 +17,7 @@ public final class AimTrace {
 
     // Advice is inlined into IsoPlayer, which is outside this package.
     public static void observe(IsoPlayer player) {
-        if (!Bridge.topDownActive() || player != IsoPlayer.getInstance()) {
+        if (!CameraController.topDownActive() || player != IsoPlayer.getInstance()) {
             held = false;
             remaining = 0;
             return;

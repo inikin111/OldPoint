@@ -1,72 +1,104 @@
-# 架构迁移：相机生命周期
+# 相机与遮挡分层
 
-本分支从 `471d839` 开始渐进重构。已迁移相机控制状态，并集中 Viewpoint 的私有相机操作；没有修改遮挡算法或 Viewpoint Hook 协议。
+本分支从 `471d839` 开始渐进重构。本轮已完成相机状态、Viewpoint 适配、帧捕获、遮挡结果、规则打包、绘制上下文与着色器转换的分离。
 
-## 当前职责
+## 职责与调用方向
 
-- `CameraController` 拥有 OldPoint 的模式启用标志、俯视锁存、待处理进入请求、进入来源、返回目标、保存的视角及旋转输入。只有它能写这些状态。
-- Viewpoint 继续拥有实际的 `View.enabled`、`View.thirdPerson` 和 `Look`。请求 `FP.cycleView` 并不等于启用成功，仍由 `afterToggle` 确认并消费请求。
-- `Bridge` 保留 `OldPointBridge` Lua 名称、原有对外方法和全部嵌套补丁类。相机控制方法委托给 `CameraController`；当前帧几何、帧快照与渲染接入仍在 Bridge。
-- `ViewpointCameraAdapter` 集中 Viewpoint 的启用、关闭、光标及步行/乘车第三人称设置操作。反射绑定按需解析，成功后缓存；Controller 保留转换策略和原有异常处理位置。Adapter 不持有 OldPoint 的模式状态。
-- `CompatibilityErrors` 保留相机和绘制共用的“兼容错误只报告一次”行为，避免模块拆分后各自重复报告。
+| 模块 | 拥有的数据或职责 |
+| --- | --- |
+| Bridge | 保留 OldPointBridge Lua 名称、原有对外方法和 Hook 注解；把调用交给具体模块 |
+| CameraController | OldPoint 模式、进入请求、记忆返回、保存视角、旋转输入和过渡 |
+| ViewpointCameraAdapter | Viewpoint 私有启停方法、光标字段、步行/乘车第三人称设置；按需解析并缓存反射绑定 |
+| CameraCapture | 当前帧相机几何，以及以 Frame 为弱键的同步快照表 |
+| CameraDrawing | 绘制线程的相机快照绑定、方向/位置读取、居中矩阵和天气锚点 |
+| ViewpointVisibilityAdapter | Viewpoint 房间可见性锚点与原生 portal culling 的兼容操作 |
+| Interior | 遮挡选择、渐变进度、按 SceneData 发布结果，以及 CPU 端遮挡查询 |
+| OcclusionSnapshot | 捕获结果的数据约定：房间轮廓、上层区域、墙体渐变、屋顶、开口、树和室内明暗 |
+| OcclusionRules | 将捕获结果打包为 GPU 规则表，判断几何是否相同并复用打包结果；不调用 OpenGL |
+| OcclusionRendering | 绘制线程的遮挡快照、内置/Iris uniform 上传，调用 CutawayData 上传与绑定 |
+| OcclusionShaders | 内置/Iris 着色器文本转换，不访问帧状态或游戏世界 |
+| CutawayData | 原有 GPU 缓冲、纹理与采样器绑定、恢复 |
 
-## 帧与模式
+内部功能模块直接访问 CameraController 或 CameraDrawing，不再通过 Bridge 查询或切换状态。Bridge 作为外部入口保留。Interior 原有的 shader、uniforms、irisUniforms、begin/end 方法也保留委托，避免改动既有调用协议。
 
-模式状态属于 CameraController；`Bridge.CameraState` 是已经捕获的一帧，不是相机模式的第二个所有者。
+```mermaid
+flowchart TD
+    Hooks[Bridge / Lua / Hooks] --> Controller[CameraController]
+    Controller --> Backend[ViewpointCameraAdapter]
+    Hooks --> Capture[CameraCapture]
+    Capture --> Controller
+    Capture --> CameraFrame[CameraCapture.Snapshot]
+    Capture --> Selection[Interior 遮挡选择]
+    Selection --> Result[OcclusionSnapshot]
+    Hooks --> Drawing[CameraDrawing]
+    CameraFrame --> Drawing
+    Result --> Render[OcclusionRendering]
+    Render --> Rules[OcclusionRules]
+    Rules --> Packed[CutawayData.Data]
+    Packed --> GPU[CutawayData 上传与绑定]
+    Hooks --> Shader[OcclusionShaders]
+```
 
-捕获端调用 `CameraController.captureYaw()` 推进原有旋转过渡，再计算当前帧几何。绘制端仍优先使用帧快照，不推进旋转动画。无绘制快照时的方向查询只读取 Controller 的朝向。
+Viewpoint 继续拥有实际的 View.enabled、View.thirdPerson 和 Look。请求 FP.cycleView 不等于启用成功，仍由 afterToggle 确认并消费请求。适配层执行操作，转换策略和原有异常处理位置留在 Controller。
 
-## 保留的转换规则
+## 捕获与绘制的约定
 
-- 循环键：第一人称 → 第三人称 → 俯视 → 第一人称。处理后的按键仍跳过原 ThirdPerson.poll。
-- 记忆俯视键：记住来源，退出时返回原版、第一或第三人称。
-- 原版下请求 Viewpoint 启用必须经过其正常检查；请求保持原有 10 秒超时及回调内检查时机。
-- 自动/瞄准请求继续使用原有 0..4 编码、守卫和朝向保持行为。
+CameraCapture 调用 CameraController.captureYaw 推进旋转，再计算当前帧几何。CameraCapture.Snapshot 保存不可变的相机偏移、方向及天气锚点；偏移字段命名为 offsetX/offsetUp/offsetZ，避免原先 x/up/y 混用轴的含义。
+
+CameraDrawing 在 beginDrawing 绑定该帧快照，在 endDrawing 清除线程绑定。绘制期间读取快照，不推进旋转。绘制上下文之外的方向查询仍按原行为只读取 Controller 的当前朝向。centerDrawing 和 position 保留 Viewpoint Frame 内的 eye 坐标参与计算，未改变帧复用协议。
+
+相机快照仍在 Interior.capture 之前发布。TreeClearing、Interior、相机效果清零、全局 View 偏移、cameraCut、Pointer、VisionSystem 和光标同步的先后顺序保持原样。普通视角或 frame.onCamera 路径覆盖旧的俯视快照，避免复用帧遗留标记。
+
+遮挡结果继续按 SceneData 保存，不强行与相机的 Frame 快照合并。房间矩形、墙体段、开口实例、树遮罩和屋顶模型保留各自的表示与选择算法。OcclusionSnapshot 的 origin/player/direction/eye 使用 Viewpoint 渲染轴；矩形、墙体位置和 floor 使用游戏坐标。捕获端拥有列表和树的 cells 数组，消费端按只读约定使用，未在每帧新增深拷贝。
+
+规则表仍限制为 32 个上层区域和 128 段结构墙。规则复用继续比较房间区域、边界、墙体渐变、屋顶、开口实例、室内明暗和树网格内容；单纯相机移动不重新打包。CPU 端遮挡查询保留原有 latest/scene 选择方式。
+
+## 保持的行为与一处清理修复
+
+- 循环键：第一人称 → 第三人称 → 俯视 → 第一人称。
+- 记忆俯视键记住来源；退出时返回原版、第一或第三人称。
+- Viewpoint 启用仍经过其正常检查，待处理请求保留原有 10 秒超时。
+- 自动/瞄准请求保留原有 0..4 编码和各入口原本不同的守卫。
 - FreeCam 临时使 topDownActive 为 false，不等同于退出俯视。
-- 关闭 OldPoint 时保留原有第三人称底座行为；Viewpoint 关闭后按原回调清理俯视。
-- 固定角度、拖动旋转、分步旋转和重置朝向的条件与顺序保持原样。
+- 固定角度、拖动、分步旋转和朝向重置保持原有条件与顺序。
+- 不修改遮挡选择算法、规则表布局、着色器转换结果和 Hook 执行顺序。
 
-这一步没有统一或修正各入口原本不同的守卫，没有把状态重写成新枚举状态机，也没有调整 Hook 执行顺序。
+绘制异常的清理有一处明确增强：TreeClearing.end 抛错后仍执行 Interior.end 和 RoofModels.end，RoofModels.end 抛错后仍解除相机线程绑定；CutawayData.end 抛错后仍解除遮挡线程绑定。正常顺序保持不变，异常仍向调用方传播。此前部分后续清理可能被前一个异常跳过。
 
-## 验证
+## 统一验证
 
-完整构建：在源码根目录运行 `.\.local\dev.ps1 -Action Build`。
-
-生命周期测试：
+本机已配置 .local/environment.psd1，在源码根目录运行：
 
 ```powershell
-$envConfig = Import-PowerShellDataFile .\.local\environment.psd1
-python .\java\tests\run_camera_tests.py --jdk $envConfig.Jdk
+.\java\format.ps1 -Check
+.\java\test.ps1
 ```
 
-19 个场景执行真实 CameraController、ViewpointCameraAdapter、Layout 和 ResetMotion，使用轻量模拟运行环境代替游戏、Viewpoint、输入设备及无关效果。每个场景单独启动 JVM，避免静态状态污染。测试覆盖循环、记忆返回、异步启用、显式退出、守卫、FreeCam、禁用、外部关闭、旋转光标、固定角度、分步旋转、朝向保持、待处理请求取消、步行/乘车设置选择和重复启停。
-
-本次迁移还提供编译产物的接口兼容检查：
+其他环境可以显式提供依赖和重构前 JAR：
 
 ```powershell
-python .\java\tests\check_hook_compatibility.py --baseline .\.local\camera-refactor-baseline\OldPoint.jar --current .\42\media\java\client\OldPoint.jar
+.\java\test.ps1 -Jdk '<JDK目录>' -ZombieBuddy '<ZombieBuddy.jar>' -Viewpoint '<Viewpoint.jar>' -Game '<projectzomboid.jar>' -Baseline '<重构前OldPoint.jar>'
 ```
 
-baseline 是迁移前的构建产物，本机保存在 Git 忽略目录。检查 Lua 暴露注解、Bridge 的 public/package 方法，以及全部 Hook 的类目标、方法名、回调时机和参数绑定；它不比较或执行所有 Hook 的逻辑。
+需要能读取当前游戏字节码的 JDK，本机使用 JDK 25；输出仍为 Java 17 字节码。test.ps1 构建源码，运行全部回归，检查 Hook 和实际安装的 Viewpoint 反射约定。Baseline 必须是独立的重构前产物；本机默认使用 Git 忽略目录 .local/camera-refactor-baseline/OldPoint.jar，不能使用即将覆盖的构建输出。脚本不部署。
 
-已安装 Viewpoint 的绑定检查：
+本轮结果：
 
-```powershell
-$testOut = 'java/build/viewpoint-binding-tests'
-New-Item -ItemType Directory -Force -Path $testOut | Out-Null
-& "$($envConfig.Jdk)/bin/javac.exe" --release 17 -d $testOut java/tests/oldpoint/viewpoint/ViewpointCameraBindingsTest.java
-$classpath = "$testOut;$($envConfig.Viewpoint);$($envConfig.Game);$($envConfig.ZombieBuddy)"
-& "$($envConfig.Jdk)/bin/java.exe" -cp $classpath oldpoint.viewpoint.ViewpointCameraBindingsTest
-```
+| 检查 | 结果 |
+| --- | --- |
+| 生命周期 | 19 个独立 JVM 场景通过，执行真实 Controller/Adapter，模拟游戏环境 |
+| 帧捕获 | 8 个场景通过，覆盖几何、调用顺序、帧复用、cameraCut、平移和普通视角 |
+| 相机绘制 | 11 个场景通过，覆盖快照读取、位置、居中、无效向量、线程隔离和异常清理 |
+| 对外协议 | 60 个 Bridge public/package 方法与 Lua 暴露不变，135 个 Hook 目标、时机和参数绑定不变 |
+| 实际 Viewpoint.jar | 16 项启停、光标、设置、可见性和 SceneDrawer 反射绑定通过；不初始化游戏类 |
+| 遮挡数据差异 | 空结果、混合类型、超过容量限制、负坐标、大范围空间索引 5 组重构前后打包数据及偏移逐项一致 |
+| 打包缓存 | 相同快照及仅相机坐标变化时复用规则对象 |
+| 着色器差异 | 已安装 Viewpoint 的 262 份着色器源码转换结果与重构前逐字一致，4 个空值/重复插入守卫通过 |
 
-检查实际 JAR 的 `cycleView`、`switchView`、`cursorMode`、`ON_FOOT` 和 `SEATED` 的名称、类型、静态属性与反射访问权限。加载类时禁用初始化，不调用游戏入口。此检查不能证明方法执行时的行为。
+模拟场景不启动游戏或 OpenGL。差异检查在独立类加载器中执行重构前后实际 JAR 的打包与文本转换；它不执行真实 GPU 上传。待处理请求的超时仍使用真实时钟，本轮未等待十秒验证。不能据此声称帧率提升或游戏画面已经验证。
 
-模拟环境不会加载游戏或 OpenGL；它不能证明真实字节码注入、GLFW 鼠标捕获或游戏内画面正确。待处理请求的 10 秒超时仍使用真实时钟，本轮不通过修改私有字段或等待十秒来测试它；迁移方法体比对确认保留原有实现。需要结合完整依赖编译、Hook/Lua 接口兼容核对与游戏内冒烟测试。
+## 运行验证状态
 
-游戏内检查：三种视角循环；从原版及两种 Viewpoint 模式记忆进入/退出；驾驶位与瞄准自动切换；旋转/固定角度；暂停/模态窗口；退出 Viewpoint 后重入。尚未完成游戏内验证时，不把分支部署到稳定运行副本。
+本轮源码分层与自动检查已完成，尚未部署、推送或进行游戏内冒烟测试。游戏内仍需覆盖三种视角循环、原版及 Viewpoint 模式的记忆返回、驾驶/瞄准切换、旋转与固定角度、暂停/模态窗口、树木及室内外遮挡、内置和 Iris 渲染路径。
 
-## 后续阶段
-
-1. 将当前帧几何与快照发布从 Bridge 提取为相机捕获模块。
-2. 在保留多种几何表示的前提下整理遮挡结果接口。
-3. 集中绘制上下文和规则上传；性能优化另用测量验证。
+后续性能优化应单独按 InteriorCost 与实际帧时间测量推进；本轮没有把结构调整当作性能优化结果。

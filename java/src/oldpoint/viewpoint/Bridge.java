@@ -1,21 +1,10 @@
 package oldpoint.viewpoint;
 
-import java.lang.reflect.Field;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.WeakHashMap;
 import me.zed_0xff.zombie_buddy.Exposer;
 import me.zed_0xff.zombie_buddy.Patch;
 import viewpoint.core.Frame;
-import viewpoint.core.View;
-import viewpoint.input.Look;
-
 import zombie.characters.IsoGameCharacter;
-import zombie.core.Core;
-
 import zombie.iso.Vector2;
-import zombie.ui.UIManager;
 
 /** A playable, player-following isometric camera inside Viewpoint's renderer. */
 @Exposer.LuaClass(name = "OldPointBridge")
@@ -23,30 +12,6 @@ public final class Bridge {
     static {
         System.out.println("[OldPoint] loaded build 0.6.151: selected-wall decoration hiding");
     }
-
-    private static Field drawerFrame;
-    private static Field drawerEye;
-    private static Field drawerDirection;
-    private static Field drawerView;
-    private static boolean reportedCenterMismatch;
-    private static Field roomsView;
-    private static Field[] roomViewFields;
-    private static final Map<Frame, CameraState> cameraStates = Collections.synchronizedMap(new WeakHashMap<>());
-    private static final ThreadLocal<CameraState> drawing = new ThreadLocal<>();
-
-    private record CameraState(
-            boolean topDown,
-            float x,
-            float up,
-            float y,
-            float dx,
-            float dy,
-            float dz,
-            float playerX,
-            float playerY,
-            float playerZ) {}
-
-    private static final CameraState NORMAL = new CameraState(false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     private Bridge() {}
 
@@ -210,10 +175,6 @@ public final class Bridge {
         WorldContext.draw((zombie.iso.IsoGridSquare) square, valid);
     }
 
-    private static void report(Throwable error) {
-        CompatibilityErrors.report(error);
-    }
-
     public static boolean handleViewKey() {
         return CameraController.handleViewKey();
     }
@@ -252,242 +213,51 @@ public final class Bridge {
     }
 
     public static boolean captureCamera(Object value, Object character) {
-        Frame frame = (Frame) value;
-        PlayerOutline.reset(frame.scene);
-        IndoorWeather.snapshot(frame, character);
-        if (!topDownActive() || frame.onCamera) {
-            TreeClearing.reset(frame.scene);
-            Interior.reset(frame.scene);
-            cameraStates.put(frame, NORMAL);
-
-            return false;
-        }
-        IsoGameCharacter player = (IsoGameCharacter) character;
-        float orbitYaw = CameraController.captureYaw();
-        frame.viewYaw = orbitYaw;
-        frame.viewPitch = overheadPitch();
-        frame.eyeX = -(player.getX() - frame.camX);
-        frame.eyeZ = -(player.getY() - frame.camY);
-        float terrainHeight = TerrainCamera.height(player.getX(), player.getY());
-        frame.eyeY = 0.8f + (player.getZ() - frame.camZ) * 2.4494896f + terrainHeight;
-        frame.eyeLean = 0;
-        float distance = Layout.distance(Core.getInstance().getScreenHeight(), Core.getTileScale(), Zoom.factor());
-        float dx = (float) (-Math.cos(orbitYaw) * Math.cos(overheadPitch()));
-        float dy = (float) Math.sin(overheadPitch());
-        float dz = (float) (-Math.sin(orbitYaw) * Math.cos(overheadPitch()));
-        if (player instanceof zombie.characters.IsoPlayer local) {
-            AimCamera.pan(frame, local, distance, dx, dy, dz);
-        }
-        // World X/Y point toward the camera along this horizontal direction.
-        TreeClearing.capture(
-                frame,
-                player,
-                (float) (-frame.eyeX + dx * distance - frame.scene.originX - player.getX()),
-                (float) (-frame.eyeZ + dz * distance - frame.scene.originZ - player.getY()));
-        CameraState state =
-                new CameraState(
-                        true,
-                        dx * distance,
-                        -dy * distance,
-                        dz * distance,
-                        dx,
-                        dy,
-                        dz,
-                        (float) (-player.getX() - frame.scene.originX),
-                        (float) (player.getZ() * 2.4494896 + 0.8 + terrainHeight - frame.scene.originY),
-                        (float) (-player.getY() - frame.scene.originZ));
-        CameraState previous = cameraStates.put(frame, state);
-        Interior.capture(frame, player, frame.eyeX - state.x, frame.eyeY + state.up, frame.eyeZ - state.y, dx, dy, dz);
-        // 0.1.6 stores camera effects in each frame instead of global offsets.
-        // Clear the reused shot so shoulder sway, recoil and roll cannot leak in.
-        frame.cameraShot.clear();
-        frame.cameraShot.on = true;
-        frame.cameraShot.seated = player.getVehicle() != null;
-        frame.cameraShot.fovY = Layout.FOV;
-        frame.cameraShot.handYaw = player.getDirectionAngleRadians();
-        frame.cameraShot.handPitch = 0;
-        View.cameraX = state.x;
-        View.cameraY = state.y;
-        View.cameraUp = state.up;
-        View.frameFovY = Layout.FOV;
-        frame.scene.cameraCut = previous == null || !previous.topDown;
-        frame.scene.cameraFocus = frame.scene.cameraAim = frame.scene.cameraTrauma = 0;
-        frame.cameraSquares.on = true;
-        frame.cameraSquares.x = (int) Math.floor(player.getX());
-        frame.cameraSquares.y = (int) Math.floor(player.getY());
-        frame.cameraSquares.level = (int) Math.floor(player.getZ());
-        frame.cameraSquares.side = 0;
-        Pointer.snapshot(
-                frame,
-                frame.eyeX - state.x,
-                frame.eyeY + state.up,
-                frame.eyeZ - state.y,
-                dx,
-                dy,
-                dz,
-                Core.getInstance().getScreenWidth(),
-                Core.getInstance().getScreenHeight(),
-                terrainHeight);
-        if (player instanceof zombie.characters.IsoPlayer local) {
-            VisionSystem.capture(frame, local);
-        }
-        syncCursor();
-        return true;
+        return CameraCapture.capture((Frame) value, character);
     }
 
     public static void beginDrawing(Object drawer) {
-        try {
-            if (drawerFrame == null) {
-                drawerFrame = drawer.getClass().getDeclaredField("frame");
-                drawerFrame.setAccessible(true);
-            }
-            Frame frame = (Frame) drawerFrame.get(drawer);
-            drawing.set(cameraStates.getOrDefault(frame, NORMAL));
-            Interior.begin(frame.scene);
-            TreeClearing.begin(frame.scene);
-        } catch (ReflectiveOperationException error) {
-            report(error);
-            drawing.set(NORMAL);
-        }
+        CameraDrawing.beginDrawing(drawer);
     }
 
     public static void endDrawing() {
-        try {
-            TreeClearing.end();
-            Interior.end();
-        } finally {
-            RoofModels.end();
-            drawing.remove();
-        }
+        CameraDrawing.endDrawing();
     }
 
     public static boolean centerDrawing(Object drawer) {
-        CameraState state = drawing.get();
-        if (state == null || !state.topDown) {
-            return false;
-        }
-        try {
-            if (drawerEye == null) {
-                Class<?> type = drawer.getClass();
-                drawerEye = type.getDeclaredField("eye");
-                drawerDirection = type.getDeclaredField("dir");
-                drawerView = type.getDeclaredField("view");
-                drawerEye.setAccessible(true);
-                drawerDirection.setAccessible(true);
-                drawerView.setAccessible(true);
-            }
-            Frame frame = (Frame) drawerFrame.get(drawer);
-            float[] eye = (float[]) drawerEye.get(drawer);
-            float[] direction = (float[]) drawerDirection.get(drawer);
-            float dx = frame.eyeX - eye[0];
-            float dy = frame.eyeY - eye[1];
-            float dz = frame.eyeZ - eye[2];
-            float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (!Float.isFinite(length) || length < 0.0001f) {
-                return false;
-            }
-            dx /= length;
-            dy /= length;
-            dz /= length;
-            float error = Math.abs(dx - direction[0]) + Math.abs(dy - direction[1]) + Math.abs(dz - direction[2]);
-            if (!reportedCenterMismatch && error > 0.001f) {
-                reportedCenterMismatch = true;
-                System.out.println("[OldPoint] camera center direction mismatch: " + error + ", frame=" + frame.number);
-            }
-            direction[0] = dx;
-            direction[1] = dy;
-            direction[2] = dz;
-            // Aim directly at the captured player pivot, not eye + a direction
-            // sampled elsewhere. This also avoids subtractive precision loss
-            // from constructing a target only one unit from a distant eye.
-            ((org.joml.Matrix4f) drawerView.get(null))
-                    .setLookAt(eye[0], eye[1], eye[2], frame.eyeX, frame.eyeY, frame.eyeZ, 0, 1, 0);
-            return true;
-        } catch (ReflectiveOperationException error) {
-            report(error);
-            return false;
-        }
+        return CameraDrawing.centerDrawing(drawer);
     }
 
     public static boolean drawTopDown() {
-        CameraState state = drawing.get();
-        return state != null ? state.topDown : topDownActive();
+        return CameraDrawing.drawTopDown();
     }
 
     public static float weatherActive() {
-        CameraState state = drawing.get();
-        return state != null && state.topDown ? 1 : 0;
+        return CameraDrawing.weatherActive();
     }
 
     public static float weatherAnchor(int axis) {
-        CameraState state = drawing.get();
-        return state == null ? 0 : axis == 0 ? state.playerX : axis == 1 ? state.playerY : state.playerZ;
+        return CameraDrawing.weatherAnchor(axis);
     }
 
     public static boolean direction(float[] result) {
-        if (!drawTopDown()) {
-            return false;
-        }
-        CameraState state = drawing.get();
-        result[0] =
-                state == null ? (float) (-Math.cos(CameraController.orbitYaw()) * Math.cos(overheadPitch())) : state.dx;
-        result[1] = state == null ? (float) Math.sin(overheadPitch()) : state.dy;
-        result[2] =
-                state == null ? (float) (-Math.sin(CameraController.orbitYaw()) * Math.cos(overheadPitch())) : state.dz;
-        return true;
+        return CameraDrawing.direction(result);
     }
 
     public static boolean position(Object value, float[] result) {
-        Frame frame = (Frame) value;
-        CameraState state = cameraStates.get(frame);
-        if (state == null || !state.topDown) {
-            return false;
-        }
-        result[0] = frame.eyeX - state.x;
-        result[1] = frame.eyeY + state.up;
-        result[2] = frame.eyeZ - state.y;
-        return true;
+        return CameraDrawing.position(value, result);
     }
 
     public static boolean frameTopDown(Object value) {
-        CameraState state = cameraStates.get((Frame) value);
-        return state != null && state.topDown;
+        return CameraDrawing.frameTopDown(value);
     }
 
     public static float fieldOfView(float normal) {
-        return topDownActive() ? Layout.FOV : normal;
+        return CameraDrawing.fieldOfView(normal);
     }
 
     public static void roomView(Object value) {
-        if (!topDownActive()) {
-            return;
-        }
-        Frame frame = (Frame) value;
-        try {
-            if (roomsView == null) {
-                roomsView = Class.forName("viewpoint.visibility.Rooms").getDeclaredField("view");
-                roomsView.setAccessible(true);
-                Object view = roomsView.get(null);
-                String[] names = {"x", "y", "h", "tanX", "tanY"};
-                roomViewFields = new Field[names.length];
-                for (int i = 0; i < names.length; i++) {
-                    roomViewFields[i] = view.getClass().getDeclaredField(names[i]);
-                    roomViewFields[i].setAccessible(true);
-                }
-            }
-            Object view = roomsView.get(null);
-            // The overhead eye can be tens of storeys above the room graph. That makes
-            // Rooms.choose return "eye in no sector" and disables all room culling.
-            // Anchor visibility to the player's valid floor, independently of camera zoom.
-            roomViewFields[0].setFloat(view, frame.camX);
-            roomViewFields[1].setFloat(view, frame.camY);
-            roomViewFields[2].setFloat(view, frame.camZ * 2.4494896f + 0.8f);
-            float wide = (float) Math.tan(Math.toRadians(85));
-            roomViewFields[3].setFloat(view, wide);
-            roomViewFields[4].setFloat(view, wide);
-        } catch (ReflectiveOperationException error) {
-            report(error);
-        }
+        ViewpointVisibilityAdapter.roomView(value);
     }
 
     @Patch(className = "zombie.characters.IsoPlayer", methodName = "calculateAimVector", strictMatch = false)

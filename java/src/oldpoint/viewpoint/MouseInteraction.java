@@ -49,20 +49,20 @@ public final class MouseInteraction {
     }
 
     public static boolean begin(Frame frame) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return false;
         }
         clear();
         frame.scene.targetMesh = null;
         frame.scene.targetSquare = -1;
         frame.scene.targetOwner = -1;
-        MouseTargets.frame(Bridge.keepAimCursor() && !Pointer.overUI());
+        MouseTargets.frame(CameraController.keepAimCursor() && !Pointer.overUI());
         return false; // Let the native snapshot build its rows and interaction state.
     }
 
     public static IsoPlayer player(IsoGameCharacter value) {
         if (failed
-                || !Bridge.keepAimCursor()
+                || !CameraController.keepAimCursor()
                 || Pointer.overUI()
                 || !(value instanceof IsoPlayer player)
                 || player != IsoPlayer.players[0]
@@ -83,7 +83,7 @@ public final class MouseInteraction {
     }
 
     public static void aim() {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return;
         }
         try {
@@ -99,7 +99,7 @@ public final class MouseInteraction {
     }
 
     public static void target(Object value) {
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return;
         }
         try {
@@ -114,7 +114,7 @@ public final class MouseInteraction {
 
     public static IsoObject picked() {
         Pick p = pick;
-        return Bridge.keepAimCursor()
+        return CameraController.keepAimCursor()
                         && !Pointer.overUI()
                         && p != null
                         && System.nanoTime() - p.time < 150_000_000L
@@ -129,7 +129,7 @@ public final class MouseInteraction {
         @Patch.OnExit
         public static void exit(
                 @Patch.Argument(0) IsoGameCharacter value, @Patch.Return(readOnly = false) IsoPlayer result) {
-            if (Bridge.topDownActive()) {
+            if (CameraController.topDownActive()) {
                 result = MouseInteraction.player(value);
             }
         }

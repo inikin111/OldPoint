@@ -81,7 +81,7 @@ public final class VisionFade {
     public static void begin(Frame frame) {
         Ranges r = ranges.get();
         r.count = 0;
-        r.active = VisionSystem.active() && Bridge.frameTopDown(frame);
+        r.active = VisionSystem.active() && CameraDrawing.frameTopDown(frame);
     }
 
     public static void captureBegin(Frame frame) {

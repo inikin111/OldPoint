@@ -30,7 +30,7 @@ public final class OpeningFade {
 
     public static void atlasBound(Object[] arguments) {
         var program = programs.get();
-        if (program == null || !Bridge.drawTopDown() || arguments.length == 0) {
+        if (program == null || !CameraDrawing.drawTopDown() || arguments.length == 0) {
             return;
         }
         if (arguments[arguments.length - 1] instanceof zombie.core.textures.TextureID page) {
@@ -88,7 +88,7 @@ public final class OpeningFade {
             List<Layout.Rect> occupied,
             Layout.Sight sight,
             OutdoorCutaway.Selection outdoor,
-            java.util.Set<Interior.Wall> hiddenWalls) {
+            java.util.Set<OcclusionSnapshot.Wall> hiddenWalls) {
         var cell = IsoWorld.instance.getCell();
         var own = player.getCurrentSquare().getRoom();
         int floor = (int) Math.floor(player.getZ());
@@ -250,11 +250,13 @@ public final class OpeningFade {
                                     && (outdoor != null
                                             ? outdoor.opening(edge.x(), edge.y(), edge.kind())
                                             : hiddenWalls.contains(
-                                                    new Interior.Wall(edge.x(), edge.y(), floor, edge.kind())));
+                                                    new OcclusionSnapshot.Wall(
+                                                            edge.x(), edge.y(), floor, edge.kind())));
                     if (decoration != null) {
                         opening =
                                 hiddenWalls.contains(
-                                        new Interior.Wall(decoration.x(), decoration.y(), floor, decoration.kind()));
+                                        new OcclusionSnapshot.Wall(
+                                                decoration.x(), decoration.y(), floor, decoration.kind()));
                     }
                     if (!opening && !nearObject && !furnitureCandidate && !doorCandidate) {
                         continue;

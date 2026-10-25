@@ -17,7 +17,7 @@ public final class CursorScale {
 
     public static void begin(int index) {
         pendingPlayer.remove();
-        if (!Bridge.topDownActive()) {
+        if (!CameraController.topDownActive()) {
             return;
         }
         IsoPlayer player = IsoPlayer.getInstance();

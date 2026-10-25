@@ -16,7 +16,7 @@ public final class ZombieVisibility {
     private ZombieVisibility() {}
 
     public static boolean wanted(IsoMovingObject object, IsoPlayer player, boolean original) {
-        if (!Bridge.topDownActive() || !(object instanceof IsoZombie) || player == null) {
+        if (!CameraController.topDownActive() || !(object instanceof IsoZombie) || player == null) {
             return original;
         }
         if (UpperFloorObjects.hidden(object)) {

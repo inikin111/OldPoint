@@ -12,3 +12,6 @@ hs_err_pid*
 /.vs/
 Thumbs.db
 Desktop.ini
+
+# Python test runner cache
+__pycache__/
