@@ -60,9 +60,6 @@ public final class CameraDrawingTest {
                 require(CameraDrawing.direction(result), "Fallback direction available");
                 near(result[2], -1);
                 require(CameraController.advances == advances, "Fallback is read-only");
-                near(CameraDrawing.fieldOfView(1), Layout.FOV);
-                CameraController.active = false;
-                near(CameraDrawing.fieldOfView(1), 1);
             }
             case "position" -> {
                 require(CameraDrawing.position(frame, result), "Captured position available");

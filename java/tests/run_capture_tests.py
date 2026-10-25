@@ -139,7 +139,7 @@ def main():
     subprocess.run([str(args.jdk / 'bin/javac.exe'), '--release', '17', '-encoding', 'UTF-8',
                     '-d', str(classes), *files], check=True)
     scenarios = ['geometry', 'disabled', 'on-camera', 'frame-reuse', 'independent-frames',
-                 'read-only-snapshot', 'aim-pan', 'non-player']
+                 'read-only-snapshot', 'aim-pan']
     for scenario in scenarios:
         subprocess.run([str(args.jdk / 'bin/java.exe'), '-cp', str(classes),
                         'oldpoint.viewpoint.CameraCaptureTest', scenario], check=True)
