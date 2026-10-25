@@ -154,7 +154,7 @@ def main():
         files.append(str(file))
     source = ROOT / 'java/src/oldpoint/viewpoint'
     files += [str(source / name) for name in (
-        'CameraController.java', 'CompatibilityErrors.java', 'Layout.java', 'ResetMotion.java')]
+        'CameraController.java', 'ViewpointCameraAdapter.java', 'CompatibilityErrors.java', 'Layout.java', 'ResetMotion.java')]
     files.append(str(ROOT / 'java/tests/oldpoint/viewpoint/CameraControllerTest.java'))
     subprocess.run([str(args.jdk / 'bin/javac.exe'), '--release', '17', '-encoding', 'UTF-8',
                     '-d', str(classes), *files], check=True)
@@ -162,7 +162,7 @@ def main():
                  'automatic-entry', 'automatic-overhead', 'pending-facing',
                  'explicit-exit', 'guards', 'free-camera',
                  'disable', 'toggle-off', 'cursor-orbit', 'fixed-angle',
-                 'step-rotation', 'facing', 'cancel-pending']
+                 'step-rotation', 'facing', 'cancel-pending', 'seated-mode', 'repeat-activation']
     for scenario in scenarios:
         result = subprocess.run([str(args.jdk / 'bin/java.exe'), '-cp', str(classes),
                                  'oldpoint.viewpoint.CameraControllerTest', scenario],

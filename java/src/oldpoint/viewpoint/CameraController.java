@@ -2,12 +2,10 @@ package oldpoint.viewpoint;
 
 import static oldpoint.viewpoint.CompatibilityErrors.report;
 
-import java.lang.reflect.Field;
 import viewpoint.core.View;
 import viewpoint.input.FreeCam;
 import viewpoint.input.Look;
 import viewpoint.platform.Keys;
-import viewpoint.platform.LiveSettings;
 import viewpoint.platform.SettingsWindow;
 import zombie.GameTime;
 import zombie.characters.IsoGameCharacter;
@@ -50,9 +48,6 @@ final class CameraController {
     private static volatile boolean stepRotation, smoothStepRotation = true;
     private static volatile int stepDegrees = 90, leftRotationKey, rightRotationKey;
     private static boolean leftRotationHeld, rightRotationHeld;
-    private static Field cursorMode;
-    private static Field onFootMode;
-    private static Field seatedMode;
 
     private CameraController() {}
 
@@ -111,11 +106,7 @@ final class CameraController {
                     leaveTopDown();
                 }
                 if (View.enabled) {
-                    var exit =
-                            Class.forName("viewpoint.FP")
-                                    .getDeclaredMethod("switchView", IsoGameCharacter.class, boolean.class);
-                    exit.setAccessible(true);
-                    exit.invoke(null, player, false);
+                    ViewpointCameraAdapter.disable(player);
                 }
                 return true;
             }
@@ -124,9 +115,7 @@ final class CameraController {
                 automaticEntryMode = mode;
                 automaticEntryAt = System.nanoTime();
                 // Preserve Viewpoint's normal permission, onboarding and activation checks.
-                var cycle = Class.forName("viewpoint.FP").getDeclaredMethod("cycleView");
-                cycle.setAccessible(true);
-                cycle.invoke(null);
+                ViewpointCameraAdapter.requestActivation();
                 return true;
             }
             if (mode == 3) {
@@ -314,14 +303,6 @@ final class CameraController {
         return topDownActive() && !rotating && !ImprovedAim.showing();
     }
 
-    private static Field cursorField() throws ReflectiveOperationException {
-        if (cursorMode == null) {
-            cursorMode = Class.forName("viewpoint.FP").getDeclaredField("cursorMode");
-            cursorMode.setAccessible(true);
-        }
-        return cursorMode;
-    }
-
     private static void leaveTopDown() {
         if (topDown) {
             Zoom.remember();
@@ -341,7 +322,7 @@ final class CameraController {
         Look.yaw = savedYaw;
         Look.pitch = savedPitch;
         try {
-            cursorField().setBoolean(null, savedCursor);
+            ViewpointCameraAdapter.setCursorVisible(savedCursor);
         } catch (ReflectiveOperationException error) {
             report(error);
         }
@@ -380,7 +361,7 @@ final class CameraController {
             try {
                 overheadOrigin = currentMode();
                 ShootToThrillCompat.enteringOverhead();
-                savedCursor = cursorField().getBoolean(null);
+                savedCursor = ViewpointCameraAdapter.cursorVisible();
                 savedYaw = Look.yaw;
                 savedPitch = Look.pitch;
                 setThirdPersonMode(true);
@@ -440,9 +421,7 @@ final class CameraController {
             directEntryRequested = true;
             directEntryRequestedAt = System.nanoTime();
             // Ask Viewpoint to enter through its normal onboarding/build/split-screen checks.
-            var cycle = Class.forName("viewpoint.FP").getDeclaredMethod("cycleView");
-            cycle.setAccessible(true);
-            cycle.invoke(null);
+            ViewpointCameraAdapter.requestActivation();
         } catch (ReflectiveOperationException error) {
             directEntryRequested = false;
             directReturnMode = null;
@@ -463,11 +442,7 @@ final class CameraController {
         boolean originalThird = directReturnThirdPerson;
         if (target == EntryMode.ORIGINAL) {
             try {
-                var exit =
-                        Class.forName("viewpoint.FP")
-                                .getDeclaredMethod("switchView", IsoGameCharacter.class, boolean.class);
-                exit.setAccessible(true);
-                exit.invoke(null, player, false);
+                ViewpointCameraAdapter.disable(player);
             } catch (ReflectiveOperationException error) {
                 report(error);
                 return;
@@ -499,22 +474,7 @@ final class CameraController {
 
     static void setThirdPersonMode(boolean value) {
         try {
-            if (onFootMode == null) {
-                Class<?> settings = Class.forName("viewpoint.camera.CameraSettings");
-                onFootMode = settings.getDeclaredField("ON_FOOT");
-                seatedMode = settings.getDeclaredField("SEATED");
-                onFootMode.setAccessible(true);
-                seatedMode.setAccessible(true);
-            }
-            var player = zombie.characters.IsoPlayer.players[0];
-            Field mode = player != null && player.getVehicle() != null ? seatedMode : onFootMode;
-            ((LiveSettings.Toggle) mode.get(null)).set(value);
-            // We skip poll for the handled key, so commit both pieces of state
-            // and perform the normal aim reset here, exactly once.
-            if (View.thirdPerson != value) {
-                View.thirdPerson = value;
-                viewpoint.input.CrosshairAim.switched();
-            }
+            ViewpointCameraAdapter.setThirdPerson(value);
         } catch (ReflectiveOperationException error) {
             report(error);
         }
@@ -587,7 +547,7 @@ final class CameraController {
         Look.pitch = overheadPitch();
         Look.wantCapture = held;
         try {
-            cursorField().setBoolean(null, !held);
+            ViewpointCameraAdapter.setCursorVisible(!held);
         } catch (ReflectiveOperationException error) {
             report(error);
         }

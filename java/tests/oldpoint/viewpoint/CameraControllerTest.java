@@ -210,6 +210,35 @@ public final class CameraControllerTest {
                 CameraController.setEnabled(true);
                 require(!CameraController.topDownActive(), "Disabled pending entry stays cancelled");
             }
+            case "seated-mode" -> {
+                player.vehicle = new Object();
+                CameraController.setThirdPersonMode(true);
+                require(viewpoint.camera.CameraSettings.SEATED.value, "Update seated setting");
+                require(!viewpoint.camera.CameraSettings.ON_FOOT.value, "Do not change on-foot setting");
+                require(viewpoint.input.CrosshairAim.switches == 1, "Reset aim once on mode change");
+                CameraController.setThirdPersonMode(true);
+                require(viewpoint.input.CrosshairAim.switches == 1, "Do not reset unchanged mode");
+                player.vehicle = null;
+                CameraController.setThirdPersonMode(true);
+                require(viewpoint.camera.CameraSettings.ON_FOOT.value, "Update on-foot setting");
+                require(viewpoint.input.CrosshairAim.switches == 1, "Saved-setting update is not a view transition");
+            }
+            case "repeat-activation" -> {
+                View.enabled = false;
+                CameraController.enterOverheadRemembered();
+                FP.completeActivation();
+                CameraController.afterToggle();
+                CameraController.enterOverheadRemembered();
+                require(!View.enabled, "First return to original");
+                FP.cycleAsked = false;
+                CameraController.enterOverheadRemembered();
+                require(FP.cycleAsked && !View.enabled, "Cached activation still queues a request");
+                FP.completeActivation();
+                CameraController.afterToggle();
+                require(CameraController.topDownActive(), "Re-enter through cached bindings");
+                CameraController.enterOverheadRemembered();
+                require(!View.enabled, "Cached shutdown still returns to original");
+            }
             default -> throw new AssertionError("Unknown scenario " + args[0]);
         }
     }

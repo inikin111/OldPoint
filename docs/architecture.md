@@ -1,12 +1,13 @@
 # 架构迁移：相机生命周期
 
-本分支从 `471d839` 开始渐进重构。第一阶段只迁移相机控制状态，不修改遮挡算法或 Viewpoint Hook 协议。
+本分支从 `471d839` 开始渐进重构。已迁移相机控制状态，并集中 Viewpoint 的私有相机操作；没有修改遮挡算法或 Viewpoint Hook 协议。
 
 ## 当前职责
 
 - `CameraController` 拥有 OldPoint 的模式启用标志、俯视锁存、待处理进入请求、进入来源、返回目标、保存的视角及旋转输入。只有它能写这些状态。
 - Viewpoint 继续拥有实际的 `View.enabled`、`View.thirdPerson` 和 `Look`。请求 `FP.cycleView` 并不等于启用成功，仍由 `afterToggle` 确认并消费请求。
 - `Bridge` 保留 `OldPointBridge` Lua 名称、原有对外方法和全部嵌套补丁类。相机控制方法委托给 `CameraController`；当前帧几何、帧快照与渲染接入仍在 Bridge。
+- `ViewpointCameraAdapter` 集中 Viewpoint 的启用、关闭、光标及步行/乘车第三人称设置操作。反射绑定按需解析，成功后缓存；Controller 保留转换策略和原有异常处理位置。Adapter 不持有 OldPoint 的模式状态。
 - `CompatibilityErrors` 保留相机和绘制共用的“兼容错误只报告一次”行为，避免模块拆分后各自重复报告。
 
 ## 帧与模式
@@ -38,7 +39,7 @@ $envConfig = Import-PowerShellDataFile .\.local\environment.psd1
 python .\java\tests\run_camera_tests.py --jdk $envConfig.Jdk
 ```
 
-测试执行真实 CameraController、Layout 和 ResetMotion，使用轻量模拟运行环境代替游戏、Viewpoint、输入设备及无关效果。每个场景单独启动 JVM，避免静态状态污染。测试覆盖循环、记忆返回、异步启用、显式退出、守卫、FreeCam、禁用、外部关闭、旋转光标、固定角度、分步旋转、朝向保持及待处理请求取消。
+19 个场景执行真实 CameraController、ViewpointCameraAdapter、Layout 和 ResetMotion，使用轻量模拟运行环境代替游戏、Viewpoint、输入设备及无关效果。每个场景单独启动 JVM，避免静态状态污染。测试覆盖循环、记忆返回、异步启用、显式退出、守卫、FreeCam、禁用、外部关闭、旋转光标、固定角度、分步旋转、朝向保持、待处理请求取消、步行/乘车设置选择和重复启停。
 
 本次迁移还提供编译产物的接口兼容检查：
 
@@ -48,13 +49,24 @@ python .\java\tests\check_hook_compatibility.py --baseline .\.local\camera-refac
 
 baseline 是迁移前的构建产物，本机保存在 Git 忽略目录。检查 Lua 暴露注解、Bridge 的 public/package 方法，以及全部 Hook 的类目标、方法名、回调时机和参数绑定；它不比较或执行所有 Hook 的逻辑。
 
-模拟环境不会加载游戏或 OpenGL；它不能证明真实版本的反射、字节码注入、GLFW 鼠标捕获或游戏内画面正确。待处理请求的 10 秒超时仍使用真实时钟，本轮不通过修改私有字段或等待十秒来测试它；迁移方法体比对确认保留原有实现。需要结合完整依赖编译、Hook/Lua 接口兼容核对与游戏内冒烟测试。
+已安装 Viewpoint 的绑定检查：
+
+```powershell
+$testOut = 'java/build/viewpoint-binding-tests'
+New-Item -ItemType Directory -Force -Path $testOut | Out-Null
+& "$($envConfig.Jdk)/bin/javac.exe" --release 17 -d $testOut java/tests/oldpoint/viewpoint/ViewpointCameraBindingsTest.java
+$classpath = "$testOut;$($envConfig.Viewpoint);$($envConfig.Game);$($envConfig.ZombieBuddy)"
+& "$($envConfig.Jdk)/bin/java.exe" -cp $classpath oldpoint.viewpoint.ViewpointCameraBindingsTest
+```
+
+检查实际 JAR 的 `cycleView`、`switchView`、`cursorMode`、`ON_FOOT` 和 `SEATED` 的名称、类型、静态属性与反射访问权限。加载类时禁用初始化，不调用游戏入口。此检查不能证明方法执行时的行为。
+
+模拟环境不会加载游戏或 OpenGL；它不能证明真实字节码注入、GLFW 鼠标捕获或游戏内画面正确。待处理请求的 10 秒超时仍使用真实时钟，本轮不通过修改私有字段或等待十秒来测试它；迁移方法体比对确认保留原有实现。需要结合完整依赖编译、Hook/Lua 接口兼容核对与游戏内冒烟测试。
 
 游戏内检查：三种视角循环；从原版及两种 Viewpoint 模式记忆进入/退出；驾驶位与瞄准自动切换；旋转/固定角度；暂停/模态窗口；退出 Viewpoint 后重入。尚未完成游戏内验证时，不把分支部署到稳定运行副本。
 
 ## 后续阶段
 
-1. 为 Viewpoint 反射操作建立集中 Adapter，继续减少 Controller 对具体引擎操作的了解。
-2. 将当前帧几何与快照发布从 Bridge 提取为相机捕获模块。
-3. 在保留多种几何表示的前提下整理遮挡结果接口。
-4. 集中绘制上下文和规则上传；性能优化另用测量验证。
+1. 将当前帧几何与快照发布从 Bridge 提取为相机捕获模块。
+2. 在保留多种几何表示的前提下整理遮挡结果接口。
+3. 集中绘制上下文和规则上传；性能优化另用测量验证。
