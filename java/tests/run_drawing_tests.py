@@ -56,7 +56,8 @@ public final class Matrix4f {
     files.append(str(ROOT / 'java/tests/oldpoint/viewpoint/CameraDrawingTest.java'))
     subprocess.run([str(args.jdk / 'bin/javac.exe'), '--release', '17', '-encoding', 'UTF-8',
                     '-d', str(classes), *files], check=True)
-    scenarios = ['captured-view', 'normal-frame', 'fallback', 'position', 'center', 'invalid-center',
+    scenarios = ['captured-view', 'normal-frame', 'fallback', 'position',
+                 'center-without-context', 'center-after-end', 'center', 'invalid-center',
                  'cleanup-trees', 'cleanup-interior', 'cleanup-roofs', 'reflection-error', 'thread-isolation']
     for scenario in scenarios:
         subprocess.run([str(args.jdk / 'bin/java.exe'), '-cp', str(classes),

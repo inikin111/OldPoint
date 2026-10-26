@@ -48,7 +48,7 @@ final class CameraDrawing {
 
     static boolean centerDrawing(Object drawer) {
         CameraCapture.Snapshot state = drawing.get();
-        if (!state.topDown()) {
+        if (state == null || !state.topDown()) {
             return false;
         }
         try {

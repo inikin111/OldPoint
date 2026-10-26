@@ -69,6 +69,20 @@ public final class CameraDrawingTest {
                 require(CameraDrawing.frameTopDown(frame), "Captured frame marked overhead");
                 require(!CameraDrawing.position(new Frame(), result), "Missing snapshot leaves backend position alone");
             }
+            case "center-without-context" -> {
+                require(
+                        !CameraDrawing.centerDrawing(new Object()),
+                        "No drawing context leaves backend centering alone");
+                require(CompatibilityErrors.reports == 0, "Missing context must not inspect the drawer");
+            }
+            case "center-after-end" -> {
+                CameraDrawing.beginDrawing(drawer);
+                CameraDrawing.endDrawing();
+                require(
+                        !CameraDrawing.centerDrawing(new Object()),
+                        "Ended drawing context leaves backend centering alone");
+                require(CompatibilityErrors.reports == 0, "Ended context must not inspect the drawer");
+            }
             case "center" -> {
                 CameraDrawing.position(frame, drawer.eye);
                 CameraDrawing.beginDrawing(drawer);
