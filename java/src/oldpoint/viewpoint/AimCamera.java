@@ -32,7 +32,7 @@ public final class AimCamera {
                 || player.isDead()) {
             return;
         }
-        int index = player.getPlayerNum();
+        int index = player.getIndex();
         if (index < 0 || index >= IsoCamera.cameras.length) {
             return;
         }
