@@ -5,34 +5,47 @@ import java.util.List;
 
 /** Resolve source identity at vertices; fragments receive an immutable flat rule index. */
 final class OpeningLookup {
-    static final int BUCKETS=256;
-    private OpeningLookup() { }
-    static int rows(int count) { return BUCKETS+(count+3)/4; }
-    private static int bucket(OpeningFade.Instance o) {
-        int hash=o.model()*73856093;
-        if (o.model()<0) {
-            var a=o.art();
-            hash^=Math.round(a.x()*65536)*19349663;
-            hash^=Math.round(a.y()*65536)*83492791;
-            hash^=Math.round(a.z()*65536)*49979687;
-            hash^=Math.round(a.w()*65536)*86028121;
-        }
-        return hash & (BUCKETS-1);
+    static final int BUCKETS = 256;
+
+    private OpeningLookup() {}
+
+    static int rows(int count) {
+        return BUCKETS + (count + 3) / 4;
     }
-    static void write(FloatBuffer out,List<OpeningFade.Instance> objects) {
-        int[] sizes=new int[BUCKETS],starts=new int[BUCKETS];
-        for (var o:objects) sizes[bucket(o)]++;
-        int total=0;
-        for (int i=0;i<BUCKETS;i++) {
-            starts[i]=total;
-            out.put(total).put(sizes[i]).put(0).put(0);
-            total+=sizes[i];
+
+    private static int bucket(OpeningFade.Instance o) {
+        int hash = o.model() * 73856093;
+        if (o.model() < 0) {
+            var a = o.art();
+            hash ^= Math.round(a.x() * 65536) * 19349663;
+            hash ^= Math.round(a.y() * 65536) * 83492791;
+            hash ^= Math.round(a.z() * 65536) * 49979687;
+            hash ^= Math.round(a.w() * 65536) * 86028121;
         }
-        float[] indices=new float[(total+3)/4*4];
-        for (int i=0;i<objects.size();i++) indices[starts[bucket(objects.get(i))]++]=i;
+        return hash & (BUCKETS - 1);
+    }
+
+    static void write(FloatBuffer out, List<OpeningFade.Instance> objects) {
+        int[] sizes = new int[BUCKETS], starts = new int[BUCKETS];
+        for (var o : objects) {
+            sizes[bucket(o)]++;
+        }
+        int total = 0;
+        for (int i = 0; i < BUCKETS; i++) {
+            starts[i] = total;
+            out.put(total).put(sizes[i]).put(0).put(0);
+            total += sizes[i];
+        }
+        float[] indices = new float[(total + 3) / 4 * 4];
+        for (int i = 0; i < objects.size(); i++) {
+            indices[starts[bucket(objects.get(i))]++] = i;
+        }
         out.put(indices);
     }
-    static final String SHADER=CutawayData.SHADER+"""
+
+    static final String SHADER =
+            CutawayData.SHADER
+                    + """
         uniform int uOPInterior;
         uniform vec3 uOPOrigin;
         uniform int uOPAtlasIdentity;

@@ -3,6 +3,7 @@
 /42/media/java/client/*.jar
 
 # Local environment and diagnostic material
+/.local/
 *.log
 *.dmp
 *.hprof
@@ -12,3 +13,6 @@ hs_err_pid*
 /.vs/
 Thumbs.db
 Desktop.ini
+
+# Python test runner cache
+__pycache__/

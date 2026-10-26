@@ -17,12 +17,17 @@ public final class Zoom {
     private static final WheelCycle wheelCycle = new WheelCycle();
     private static volatile int reservedModifier;
     private static boolean reportedWheelFallback;
-    private Zoom() { }
 
-    private static double clamp(double value) { return Math.max(minimum, Math.min(maximum, value)); }
+    private Zoom() {}
+
+    private static double clamp(double value) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
 
     public static synchronized void limits(double min, double max) {
-        if (!Double.isFinite(min) || !Double.isFinite(max)) return;
+        if (!Double.isFinite(min) || !Double.isFinite(max)) {
+            return;
+        }
         minimum = Math.max(10, Math.min(600, min));
         maximum = Math.max(minimum, Math.max(10, Math.min(600, max)));
         target = clamp(target);
@@ -35,9 +40,13 @@ public final class Zoom {
     }
 
     /** Keep the last captured view distance, without advancing its easing. */
-    public static synchronized void remember() { remembered=clamp(current); }
+    public static synchronized void remember() {
+        remembered = clamp(current);
+    }
 
-    public static synchronized void restore() { restoreValue(remembered); }
+    public static synchronized void restore() {
+        restoreValue(remembered);
+    }
 
     private static void restoreValue(double value) {
         wheelCycle.clear();
@@ -51,16 +60,22 @@ public final class Zoom {
         double seconds = lastUpdate == 0 ? 0 : Math.min(0.1, (now - lastUpdate) * 1e-9);
         lastUpdate = now;
         current += (target - current) * (1 - Math.exp(-seconds / 0.12));
-        if (Math.abs(target - current) < 0.001) current = target;
+        if (Math.abs(target - current) < 0.001) {
+            current = target;
+        }
         renderedFactor = (float) (clamp(current) / 100);
         return renderedFactor;
     }
 
     /** The last camera sample; UI sizing must not advance the zoom animation again. */
-    public static float renderedFactor() { return renderedFactor; }
+    public static float renderedFactor() {
+        return renderedFactor;
+    }
 
     public static synchronized boolean scroll(int player, int direction) {
-        if (!Bridge.topDownActive() || player != 0) return false;
+        if (!CameraController.topDownActive() || player != 0) {
+            return false;
+        }
         // The generic event/native-input route owns the wheel. Core may be
         // skipped, called twice, or called by another camera mod independently.
         // None of those calls may apply a second zoom to this input dispatch.
@@ -68,50 +83,71 @@ public final class Zoom {
     }
 
     /** Kept for older Lua scripts; wheel ownership is now independent of QOL. */
-    public static void qolWheelRouting(boolean value) { }
+    public static void qolWheelRouting(boolean value) {}
 
-    public static void reserveModifier(boolean enabled,int key) {
-        reservedModifier=enabled && key>0 && key<512?key:0;
+    public static void reserveModifier(boolean enabled, int key) {
+        reservedModifier = enabled && key > 0 && key < 512 ? key : 0;
     }
 
     private static boolean permitted() {
-        if (!Bridge.topDownActive() || UIManager.isModalVisible() || SettingsWindow.shown()) return false;
-        int key=reservedModifier;
-        if (key==0) return true;
-        if (GameKeyboard.isKeyDown(key)) return false;
-        int other=switch (key) { case 56 -> 184; case 184 -> 56; case 29 -> 157;
-            case 157 -> 29; case 42 -> 54; case 54 -> 42; default -> 0; };
-        return other==0 || !GameKeyboard.isKeyDown(other);
+        if (!CameraController.topDownActive() || UIManager.isModalVisible() || SettingsWindow.shown()) {
+            return false;
+        }
+        int key = reservedModifier;
+        if (key == 0) {
+            return true;
+        }
+        if (GameKeyboard.isKeyDown(key)) {
+            return false;
+        }
+        int other =
+                switch (key) {
+                    case 56 -> 184;
+                    case 184 -> 56;
+                    case 29 -> 157;
+                    case 157 -> 29;
+                    case 42 -> 54;
+                    case 54 -> 42;
+                    default -> 0;
+                };
+        return other == 0 || !GameKeyboard.isKeyDown(other);
     }
 
     public static synchronized void beginWheelCycle() {
-        wheelCycle.begin(Bridge.topDownActive()?Mouse.getWheelState():0);
+        wheelCycle.begin(CameraController.topDownActive() ? Mouse.getWheelState() : 0);
     }
 
-    public static synchronized void consumeUIWheel() { wheelCycle.consumed(); }
+    public static synchronized void consumeUIWheel() {
+        wheelCycle.consumed();
+    }
 
     public static synchronized void endWheelCycle() {
-        int direction=wheelCycle.finish(permitted());
-        if (direction==0) return;
+        int direction = wheelCycle.finish(permitted());
+        if (direction == 0) {
+            return;
+        }
         adjust(-direction);
         if (!reportedWheelFallback) {
-            reportedWheelFallback=true;
+            reportedWheelFallback = true;
             System.out.println("[OldPoint] wheel input recovered through native UI fallback");
         }
     }
 
     public static synchronized void wheel(double delta) {
-        wheel(delta,true);
+        wheel(delta, true);
     }
 
-    public static synchronized void wheel(double delta,boolean allowed) {
-        if (!Bridge.topDownActive()) return;
+    public static synchronized void wheel(double delta, boolean allowed) {
+        if (!CameraController.topDownActive()) {
+            return;
+        }
         // Inside native UI dispatch, actual wheel consumption decides whether
         // UI owns the input. A transparent full-screen overlay alone must not
         // suppress world zoom. Manual calls outside it keep the hover guard.
-        int direction=wheelCycle.event(delta,allowed && permitted()
-                && (wheelCycle.active() || !Pointer.overUI()));
-        if (direction==0) return;
+        int direction = wheelCycle.event(delta, allowed && permitted() && (wheelCycle.active() || !Pointer.overUI()));
+        if (direction == 0) {
+            return;
+        }
         // UIManager sends raw wheel sign to Lua, and its opposite to doZoomScroll.
         adjust(-direction);
     }

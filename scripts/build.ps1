@@ -12,7 +12,8 @@ foreach ($file in @($javac, $jar, $ZombieBuddy, $Viewpoint, $Game)) {
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing build dependency: $file" }
 }
 
-$buildRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'build'))
+$repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$buildRoot = Join-Path $repo 'java\build'
 $classes = Join-Path $buildRoot 'classes'
 $staged = Join-Path $buildRoot 'OldPoint.jar'
 $output = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\42\media\java\client\OldPoint.jar'))
@@ -23,7 +24,7 @@ if (Test-Path -LiteralPath $classes) { Remove-Item -LiteralPath $classes -Recurs
 New-Item -ItemType Directory -Path $classes -Force | Out-Null
 New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
 
-$sources = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Recurse -File -Filter '*.java' |
+$sources = Get-ChildItem -LiteralPath (Join-Path $repo 'java\src') -Recurse -File -Filter '*.java' |
     Select-Object -ExpandProperty FullName
 & $javac --release 17 -encoding UTF-8 -classpath "$ZombieBuddy;$Viewpoint;$Game" -d $classes $sources
 if ($LASTEXITCODE -ne 0) { throw 'OldPoint Java compilation failed' }
