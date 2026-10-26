@@ -5,13 +5,13 @@
 运行：
 
 ```powershell
-.\java\format.ps1
-.\java\format.ps1 -Check
+.\scripts\format.ps1
+.\scripts\format.ps1 -Check
 ```
 
 脚本读取本机 `.local/environment.psd1` 中的 Jdk，也接受 `-Jdk` 和 `-Formatter` 参数。格式检查会在 `java/build/format-tools` 生成工具类，不改源码。
 
-格式化包括 `java/src`、`java/tests` 和 `java/tools` 中的 Java 文件，不处理 Lua、Python 模拟运行环境字符串或生成文件。
+格式化包括 `java/src`、`java/tests` 和 `tools` 中的 Java 文件，不处理 Lua、Python 模拟运行环境字符串或生成文件。
 
 工具：google-java-format 1.37.0，使用 AOSP 四空格风格。默认 JAR 路径为 `.local/tools/google-java-format-1.37.0-all-deps.jar`。
 

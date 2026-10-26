@@ -19,12 +19,27 @@ This is the **0.6.153 candidate source**. It compiles, but this version has not 
 
 These game and mod dependencies are **not included** in this repository. Their names and APIs remain the property of their respective owners.
 
+## 目录 / Layout
+
+```text
+42/                  游戏模组目录：Lua、翻译、mod.info 和生成的 JAR
+java/src/            Java 产品源码
+java/tests/          Java 行为测试与 Python 模拟运行器
+java/build/          编译、测试和工具的生成文件（Git 忽略）
+scripts/             构建、测试、格式化入口与本机配置示例
+tools/               开发工具源码
+docs/                架构与排版说明
+.local/              本机依赖、配置与诊断材料（Git 忽略）
+```
+
+`42` 是 Project Zomboid Build 42 的模组布局。Java 源码和测试按包路径组织；生成文件集中在 `java/build`。
+
 ## 构建 / Build
 
 在 Windows PowerShell 中运行，并将参数换成你本机的实际路径：
 
 ```powershell
-.\java\build.ps1 `
+.\scripts\build.ps1 `
   -Jdk 'C:\path\to\jdk' `
   -ZombieBuddy 'C:\path\to\ZombieBuddy.jar' `
   -Viewpoint 'C:\path\to\Viewpoint.jar' `
@@ -34,6 +49,12 @@ These game and mod dependencies are **not included** in this repository. Their n
 脚本将生成 `42/media/java/client/OldPoint.jar`。将 `42` 目录安装为 OldPoint 模组。`42/media/lua` 包含 Lua 源码和翻译。
 
 The script builds `42/media/java/client/OldPoint.jar`. Install the `42` directory as the OldPoint mod. Lua sources and translations are under `42/media/lua`.
+
+## 测试与开发 / Testing and development
+
+测试入口、依赖配置和格式检查说明见 [scripts/README.md](scripts/README.md)。测试范围见 [java/tests/README.md](java/tests/README.md)，架构见 [docs/architecture.md](docs/architecture.md)。
+
+Development commands and local configuration: [scripts/README.md](scripts/README.md). Test coverage and limitations: [java/tests/README.md](java/tests/README.md).
 
 ## 参与开发 / Contributing
 

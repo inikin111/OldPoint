@@ -70,14 +70,14 @@ CameraDrawing 在 beginDrawing 绑定该帧快照，在 endDrawing 清除线程�
 本机已配置 .local/environment.psd1，在源码根目录运行：
 
 ```powershell
-.\java\format.ps1 -Check
-.\java\test.ps1
+.\scripts\format.ps1 -Check
+.\scripts\test.ps1
 ```
 
 其他环境可以显式提供依赖：
 
 ```powershell
-.\java\test.ps1 -Jdk '<JDK目录>' -ZombieBuddy '<ZombieBuddy.jar>' -Viewpoint '<Viewpoint.jar>' -Game '<projectzomboid.jar>'
+.\scripts\test.ps1 -Jdk '<JDK目录>' -ZombieBuddy '<ZombieBuddy.jar>' -Viewpoint '<Viewpoint.jar>' -Game '<projectzomboid.jar>'
 ```
 
 需要能读取当前游戏字节码的 JDK，本机使用 JDK 25；输出仍为 Java 17 字节码。test.ps1 构建源码并运行长期维护的行为回归，不需要旧版 JAR，也不部署。

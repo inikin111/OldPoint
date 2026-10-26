@@ -3,6 +3,7 @@
 /42/media/java/client/*.jar
 
 # Local environment and diagnostic material
+/.local/
 *.log
 *.dmp
 *.hprof

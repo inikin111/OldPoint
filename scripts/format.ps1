@@ -23,12 +23,12 @@ if ((Get-FileHash -LiteralPath $Formatter -Algorithm SHA256).Hash -ine $expected
 }
 $java = Join-Path $Jdk 'bin\java.exe'
 $javac = Join-Path $Jdk 'bin\javac.exe'
-$helper = Join-Path $repo 'java\tools\ReadableJavaFormat.java'
+$helper = Join-Path $repo 'tools\ReadableJavaFormat.java'
 $helperClasses = Join-Path $repo 'java\build\format-tools'
 New-Item -ItemType Directory -Path $helperClasses -Force | Out-Null
 & $javac --release 17 -encoding UTF-8 -d $helperClasses $helper
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile brace formatter' }
-$sourceRoots = @('java\src', 'java\tests', 'java\tools') | ForEach-Object { Join-Path $repo $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Container }
+$sourceRoots = @('java\src', 'java\tests', 'tools') | ForEach-Object { Join-Path $repo $_ } | Where-Object { Test-Path -LiteralPath $_ -PathType Container }
 $sources = @(Get-ChildItem -LiteralPath $sourceRoots -Recurse -File -Filter '*.java' | Sort-Object FullName | Select-Object -ExpandProperty FullName)
 $braceArgs = @('-cp', $helperClasses, 'ReadableJavaFormat')
 if ($Check) { $braceArgs += '--check' }
