@@ -24,7 +24,7 @@
 - 既有 19 个镜头生命周期、7 个帧捕获、13 个绘制场景及 3 个 Hook 内联检查通过。
 - Java 格式检查通过。
 - 从实际 jar 读取 shader，使用产品中的源码转换并展开 include；glslangValidator 编译及链接通过 mesh/gbuffer、mesh/forward、far_shell/far_shell、far_shell/gbuffer_shell、mesh/puddle 五组基础 shader。该检查使用内置基础 shader 资源，不覆盖实际启用的所有光影包。
-- 尚未完成游戏内观察；以上检查不能证明最终画面符合预期。
+- 用户已确认完成游戏内端到端测试；第三方光影包兼容性仍不在全面验证范围内。
 
 ## 游戏内检查
 
@@ -32,3 +32,13 @@
 2. 观察原本会消失的当前层墙面：应在渐变完成后，连续段中间留下平直矮墙，端部有 L 形过渡，不再有下沉到地面的右端圆角；原本不隐藏的墙保持完整。
 3. 在室内移动、旋转视角，再走到室外，检查是否出现 shader 错误或墙体完全消失。
 4. 本阶段仅判断圆角轮廓是否随既有选墙规则出现，不以封口、逐格接缝或装饰残留作为失败标准。
+
+## 连接处对比
+
+以下图片为结构示意。
+
+![两面墙转角](assets/wall-joint-corner.png)
+
+![T 形连接](assets/wall-joint-tee.png)
+
+[交互示意](assets/wall-joint-comparison.html)：下载后用浏览器打开，可切换转角、T 形和直线连接。
