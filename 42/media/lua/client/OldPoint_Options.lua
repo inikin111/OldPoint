@@ -82,12 +82,12 @@ visionIndicator:addItem(textOrFallback("UI_OldPoint_VisionNone", "None"))
 local minimumDistance = options:addSlider(
     "minimumDistance", textOrFallback("UI_OldPoint_MinimumDistance", "Minimum view distance"),
     10, 600, 1, 10,
-    textOrFallback("UI_OldPoint_DistanceHelp", "100 = default distance; range 10-600")
+    textOrFallback("UI_OldPoint_DistanceHelp", "100 = reference distance; closest view follows vanilla zoom; maximum 600")
 )
 local maximumDistance = options:addSlider(
     "maximumDistance", textOrFallback("UI_OldPoint_MaximumDistance", "Maximum view distance"),
     10, 600, 1, 600,
-    textOrFallback("UI_OldPoint_DistanceHelp", "100 = default distance; range 10-600")
+    textOrFallback("UI_OldPoint_DistanceHelp", "100 = reference distance; closest view follows vanilla zoom; maximum 600")
 )
 
 local memoryPolicy = options:addComboBox("memoryPolicy", textOrFallback("UI_OldPoint_MemoryPolicy", "Memory policy"),
@@ -137,6 +137,9 @@ local function applyOptions()
             (tonumber(releasedCamera:getValue()) or 1) - 1)
     end
     local minimum = math.max(10, math.min(600, tonumber(minimumDistance:getValue()) or 10))
+    if getSpecificPlayer(0) and OldPointBridge and OldPointBridge.nativeMinimumDistance then
+        minimum = math.max(minimum, math.ceil(OldPointBridge.nativeMinimumDistance()))
+    end
     local maximum = math.max(minimum, math.min(600, tonumber(maximumDistance:getValue()) or 600))
     minimumDistance:setValue(minimum)
     maximumDistance:setValue(maximum)

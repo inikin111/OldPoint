@@ -5,6 +5,10 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = {
+    'oldpoint/viewpoint/ProjectionDepth.java': '''package oldpoint.viewpoint;
+import viewpoint.core.Frame;
+final class ProjectionDepth { static boolean capture(Frame frame, boolean overhead) { return false; } }
+''',
     'viewpoint/core/Frame.java': '''package viewpoint.core;
 public final class Frame {
     public boolean onCamera;

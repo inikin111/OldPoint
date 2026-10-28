@@ -33,7 +33,9 @@ final class CameraCapture {
     static boolean capture(Frame frame, Object character) {
         PlayerOutline.reset(frame.scene);
         IndoorWeather.snapshot(frame, character);
-        if (!CameraController.topDownActive() || frame.onCamera) {
+        boolean overhead = CameraController.topDownActive() && !frame.onCamera;
+        boolean depthCut = ProjectionDepth.capture(frame, overhead);
+        if (!overhead) {
             TreeClearing.reset(frame.scene);
             Interior.reset(frame.scene);
             cameraStates.put(frame, NORMAL);
@@ -96,7 +98,7 @@ final class CameraCapture {
         View.cameraY = state.offsetZ;
         View.cameraUp = state.offsetUp;
         View.frameFovY = Layout.FOV;
-        frame.scene.cameraCut = previous == null || !previous.topDown;
+        frame.scene.cameraCut = previous == null || !previous.topDown || depthCut;
         frame.scene.cameraFocus = frame.scene.cameraAim = frame.scene.cameraTrauma = 0;
         frame.cameraSquares.on = true;
         frame.cameraSquares.x = (int) Math.floor(player.getX());

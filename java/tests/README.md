@@ -10,6 +10,8 @@
 | `oldpoint/viewpoint/CameraDrawingTest.java` | 绘制时读取快照、线程隔离和异常清理 |
 | `oldpoint/viewpoint/HookInliningTest.java` | 用真实 ByteBuddy 将生产回调内联到外部包并执行，检查跨包访问 |
 | `oldpoint/viewpoint/OcclusionRulesTest.java` | 使用真实规则打包检查墙段端点，覆盖转角、T 形连接、楼层隔离及淡变进度；无需 OpenGL 上下文 |
+| `oldpoint/viewpoint/ProjectionDepthTest.java` | 真实投影与逆投影、深度间隔、Iris/超分辨率参数、普通帧隔离及五个实际挂接入口 |
+| `run_zoom_tests.py` | 生产滚轮路径、原版最近缩放换算、最远范围、用户范围及记忆恢复 |
 | `run_*_tests.py` | 生成模拟环境、编译真实产品源码并执行对应 Java 场景 |
 
 Java 测试沿用产品包路径，以便访问内部模块。Python 运行器中的模拟类用于替代游戏、Viewpoint 和 OpenGL；每个行为场景在独立 JVM 中执行。Hook 内联测试使用实际安装的依赖 JAR。

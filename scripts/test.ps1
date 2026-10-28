@@ -19,7 +19,7 @@ if (-not $Jdk -or -not $ZombieBuddy -or -not $Viewpoint -or -not $Game) {
     throw 'Provide dependency paths or configure .local/environment.psd1; see docs/architecture.md'
 }
 & (Join-Path $PSScriptRoot 'build.ps1') -Jdk $Jdk -ZombieBuddy $ZombieBuddy -Viewpoint $Viewpoint -Game $Game
-foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py')) {
+foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py', 'run_zoom_tests.py')) {
     & python (Join-Path $repo "java\tests\$runner") --jdk $Jdk
     if ($LASTEXITCODE -ne 0) { throw "$runner failed" }
 }
@@ -31,6 +31,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test compilation failed' }
 $jar = Join-Path $repo '42\media\java\client\OldPoint.jar'
 & (Join-Path $Jdk 'bin\java.exe') -cp "$hookOut;$jar;$Viewpoint;$Game;$ZombieBuddy" oldpoint.viewpoint.HookInliningTest
 if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test failed' }
+$projectionOut = Join-Path $repo 'java\build\projection-tests'
+New-Item -ItemType Directory -Force -Path $projectionOut | Out-Null
+& (Join-Path $Jdk 'bin\javac.exe') --release 17 -encoding UTF-8 -classpath "$jar;$Viewpoint;$Game;$ZombieBuddy" -d $projectionOut `
+    (Join-Path $repo 'java\tests\oldpoint\viewpoint\ProjectionDepthTest.java')
+if ($LASTEXITCODE -ne 0) { throw 'Projection depth test compilation failed' }
+& (Join-Path $Jdk 'bin\java.exe') -cp "$projectionOut;$jar;$Viewpoint;$Game;$ZombieBuddy" oldpoint.viewpoint.ProjectionDepthTest
+if ($LASTEXITCODE -ne 0) { throw 'Projection depth test failed' }
 $ruleOut = Join-Path $repo 'java\build\occlusion-tests'
 New-Item -ItemType Directory -Force -Path $ruleOut | Out-Null
 & (Join-Path $Jdk 'bin\javac.exe') --release 17 -encoding UTF-8 -classpath "$jar;$Viewpoint;$Game;$ZombieBuddy" -d $ruleOut `
