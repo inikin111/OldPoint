@@ -9,8 +9,13 @@ final class OcclusionRendering {
     private static final float STOREY = 2.4494896f;
     private static final int MAX_ROOMS = OcclusionRules.MAX_ROOMS, MAX_WALLS = OcclusionRules.MAX_WALLS;
     private static final ThreadLocal<OcclusionSnapshot> drawing = new ThreadLocal<>();
+    private static volatile boolean wallDebug;
 
     private OcclusionRendering() {}
+
+    static void setWallDebug(boolean enabled) {
+        wallDebug = enabled;
+    }
 
     static void begin(OcclusionSnapshot snapshot) {
         drawing.set(snapshot);
@@ -64,7 +69,10 @@ final class OcclusionRendering {
             p.setInt("uOPInterior", enabled ? 1 : 0);
         }
         if (p.has("uOPRoundedWalls")) {
-            p.setInt("uOPRoundedWalls", enabled && !s.outdoor() && !s.occupiedRooms().isEmpty() ? 1 : 0);
+            p.setInt("uOPRoundedWalls", enabled ? 1 : 0);
+        }
+        if (p.has("uOPCutawayDebug")) {
+            p.setInt("uOPCutawayDebug", enabled && wallDebug ? 1 : 0);
         }
         if (p.has("uOPTreeEnabled")) {
             p.setInt("uOPTreeEnabled", enabled && TreeClearing.active() && s.trees().cells().length > 0 ? 1 : 0);

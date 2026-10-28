@@ -41,6 +41,11 @@ local nativeFixedView = options:addTickBox(
     false
 )
 
+local wallCutawayDebug = options:addTickBox(
+    "wallCutawayDebug", textOrFallback("UI_OldPoint_WallCutawayDebug", "Wall cutaway debug colors"), false,
+    textOrFallback("UI_OldPoint_WallCutawayDebugHelp", "Overhead only. Green marks positions matching selected wall rules. Red shows the portions that would be cut, kept visible for inspection. Apply to switch without restarting.")
+)
+
 local function cameraModeOption(id, labelKey, fallback, helpKey, helpFallback)
     local option = options:addComboBox(id, textOrFallback(labelKey, fallback),
         textOrFallback(helpKey or "UI_OldPoint_AutomaticCameraHelp", helpFallback or "Experimental. Triggered only on a transition; manual camera changes remain available. Disabled by default."))
@@ -106,6 +111,9 @@ local treeClearingRadius = options:addSlider(
 )
 
 local function applyOptions()
+    if OldPointBridge and OldPointBridge.setWallCutawayDebug then
+        OldPointBridge.setWallCutawayDebug(wallCutawayDebug:getValue() == true)
+    end
     if OldPointBridge and OldPointBridge.setMemoryPolicy then
         OldPointBridge.setMemoryPolicy((tonumber(memoryPolicy:getValue()) or 1) - 1)
     end

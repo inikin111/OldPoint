@@ -35,5 +35,13 @@ record OcclusionSnapshot(
         NearbyFade.Area nearbyArea) {
     record Wall(int x, int y, int floor, int kind) {}
 
-    record Fading(Wall wall, float amount) {}
+    record Fading(Wall wall, float amount, boolean startArc, boolean endArc, boolean maskOnly) {
+        Fading(Wall wall, float amount, boolean startArc, boolean endArc) {
+            this(wall, amount, startArc, endArc, false);
+        }
+
+        Fading(Wall wall, float amount) {
+            this(wall, amount, false, false, false);
+        }
+    }
 }

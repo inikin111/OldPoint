@@ -2,40 +2,78 @@ param(
     [string]$Jdk,
     [string]$ZombieBuddy,
     [string]$Viewpoint,
-    [string]$Game
+    [string]$Game,
+    [ValidateSet('All', 'Camera', 'Occlusion', 'Hooks', 'Reference')]
+    [string[]]$Suite = @('Camera', 'Occlusion', 'Hooks')
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$localConfig = Join-Path $repo '.local\environment.psd1'
-if (Test-Path -LiteralPath $localConfig) {
-    $config = Import-PowerShellDataFile -LiteralPath $localConfig
-    if (-not $Jdk) { $Jdk = $config.Jdk }
-    if (-not $ZombieBuddy) { $ZombieBuddy = $config.ZombieBuddy }
-    if (-not $Viewpoint) { $Viewpoint = $config.Viewpoint }
-    if (-not $Game) { $Game = $config.Game }
+. (Join-Path $PSScriptRoot 'environment.ps1')
+$dependencies = Resolve-OldPointEnvironment -Jdk $Jdk -ZombieBuddy $ZombieBuddy -Viewpoint $Viewpoint -Game $Game
+$Jdk = $dependencies.Jdk
+$ZombieBuddy = $dependencies.ZombieBuddy
+$Viewpoint = $dependencies.Viewpoint
+$Game = $dependencies.Game
+$selected = if ($Suite -contains 'All') { @('Camera', 'Occlusion', 'Hooks', 'Reference') } else { @($Suite | Select-Object -Unique) }
+if ($selected | Where-Object { $_ -ne 'Hooks' }) {
+    Get-Command python -ErrorAction Stop | Out-Null
 }
-if (-not $Jdk -or -not $ZombieBuddy -or -not $Viewpoint -or -not $Game) {
-    throw 'Provide dependency paths or configure .local/environment.psd1; see docs/architecture.md'
+& (Join-Path $PSScriptRoot 'build.ps1') @dependencies -SkipPackage
+$java = Join-Path $Jdk 'bin\java.exe'
+$javac = Join-Path $Jdk 'bin\javac.exe'
+$jar = Join-Path $repo 'java\build\OldPoint.jar'
+$classpath = "$jar;$Viewpoint;$Game;$ZombieBuddy"
+
+function Invoke-PythonTest {
+    param([string]$Path, [string[]]$Arguments = @())
+    & python (Join-Path $repo $Path) @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Path failed" }
 }
-& (Join-Path $PSScriptRoot 'build.ps1') -Jdk $Jdk -ZombieBuddy $ZombieBuddy -Viewpoint $Viewpoint -Game $Game
-foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py')) {
-    & python (Join-Path $repo "java\tests\$runner") --jdk $Jdk
-    if ($LASTEXITCODE -ne 0) { throw "$runner failed" }
+
+function Invoke-JavaTest {
+    param([string]$Name, [string[]]$Arguments = @())
+    & $java -cp "$testOut;$classpath" "oldpoint.viewpoint.$Name" @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Name failed" }
 }
-$hookOut = Join-Path $repo 'java\build\hook-tests'
-New-Item -ItemType Directory -Force -Path $hookOut | Out-Null
-& (Join-Path $Jdk 'bin\javac.exe') --release 17 -encoding UTF-8 -classpath "$ZombieBuddy;$Viewpoint;$Game" -d $hookOut `
-    (Join-Path $repo 'java\tests\oldpoint\viewpoint\HookInliningTest.java')
-if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test compilation failed' }
-$jar = Join-Path $repo '42\media\java\client\OldPoint.jar'
-& (Join-Path $Jdk 'bin\java.exe') -cp "$hookOut;$jar;$Viewpoint;$Game;$ZombieBuddy" oldpoint.viewpoint.HookInliningTest
-if ($LASTEXITCODE -ne 0) { throw 'Hook inlining test failed' }
-$ruleOut = Join-Path $repo 'java\build\occlusion-tests'
-New-Item -ItemType Directory -Force -Path $ruleOut | Out-Null
-& (Join-Path $Jdk 'bin\javac.exe') --release 17 -encoding UTF-8 -classpath "$jar;$Viewpoint;$Game;$ZombieBuddy" -d $ruleOut `
-    (Join-Path $repo 'java\tests\oldpoint\viewpoint\OcclusionRulesTest.java')
-if ($LASTEXITCODE -ne 0) { throw 'Occlusion rule test compilation failed' }
-& (Join-Path $Jdk 'bin\java.exe') -cp "$ruleOut;$jar;$Viewpoint;$Game;$ZombieBuddy" oldpoint.viewpoint.OcclusionRulesTest
-if ($LASTEXITCODE -ne 0) { throw 'Occlusion rule test failed' }
-Write-Output 'Camera and occlusion behavior tests passed. No deployment performed.'
+
+# Compile only the suites being run, into one isolated test output directory.
+$tests = @()
+if ($selected -contains 'Hooks') { $tests += 'HookInliningTest' }
+if ($selected -contains 'Occlusion') { $tests += 'OcclusionRulesTest', 'CutawayGeometryTest', 'CutawayProjectionTest' }
+if ($selected -contains 'Reference') { $tests += 'NativeWallContour', 'NativeWallContourTest', 'CutawayProjectionTest' }
+$testOut = Join-Path $repo 'java\build\suite-tests'
+if ($tests.Count -gt 0) {
+    New-Item -ItemType Directory -Force -Path $testOut | Out-Null
+    $sources = @($tests | Select-Object -Unique | ForEach-Object { Join-Path $repo "java\tests\oldpoint\viewpoint\$_.java" })
+    & $javac --release 17 -encoding UTF-8 -classpath $classpath -d $testOut @sources
+    if ($LASTEXITCODE -ne 0) { throw 'Java test compilation failed' }
+}
+
+if ($selected -contains 'Camera') {
+    foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py')) {
+        Invoke-PythonTest "java\tests\$runner" @('--jdk', $Jdk)
+    }
+}
+if ($selected -contains 'Occlusion') {
+    foreach ($runner in @('run_cutaway_tests.py', 'run_object_fade_tests.py')) {
+        Invoke-PythonTest "java\tests\$runner" @('--jdk', $Jdk)
+    }
+    foreach ($test in @('OcclusionRulesTest', 'CutawayGeometryTest', 'CutawayProjectionTest')) {
+        Invoke-JavaTest $test
+    }
+}
+if ($selected -contains 'Hooks') {
+    Invoke-JavaTest 'HookInliningTest'
+}
+if ($selected -contains 'Reference') {
+    Invoke-JavaTest 'NativeWallContourTest'
+    $fixtures = Join-Path $repo 'java\build\projection-fixtures.tsv'
+    Invoke-PythonTest 'tools\verify_native_cutaway_projection.py' @(
+        '--game-jar', $Game, '--jdk', $Jdk,
+        '--output', (Join-Path $repo 'java\build\projection-reference.json'), '--fixtures', $fixtures
+    )
+    Invoke-JavaTest 'CutawayProjectionTest' @($fixtures)
+    Invoke-PythonTest 'tools\verify_wall_contour_model.py' @('--jdk', $Jdk)
+}
+Write-Output "Passed suites: $($selected -join ', '). Distribution JAR and installed mods were not changed."

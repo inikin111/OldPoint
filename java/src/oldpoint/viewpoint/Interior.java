@@ -2,7 +2,6 @@ package oldpoint.viewpoint;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import viewpoint.render.SceneData;
 import zombie.characters.IsoGameCharacter;
 import zombie.iso.IsoWorld;
 import zombie.iso.RoomDef;
-import zombie.iso.SpriteDetails.IsoFlagType;
 
 /** Room ceilings and individually detected obstruction walls. */
 public final class Interior {
@@ -22,15 +20,9 @@ public final class Interior {
     private static final int MAX_ROOMS = OcclusionRules.MAX_ROOMS, MAX_WALLS = OcclusionRules.MAX_WALLS;
 
     private static final Map<SceneData, OcclusionSnapshot> snapshots = Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Map<Wall, Float> fades = new HashMap<>();
     private static volatile OcclusionSnapshot latest;
-    private static long previousTime;
     private static boolean reported;
     private static int reportedRoom;
-
-    private record Contour(Object cell, int floor, List<Layout.Rect> rooms, long time, List<Wall> walls) {}
-
-    private static Contour contour;
 
     private Interior() {}
 
@@ -41,16 +33,13 @@ public final class Interior {
 
     public static void clear() {
         snapshots.clear();
-        fades.clear();
         latest = null;
-        previousTime = 0;
-        contour = null;
         NativeCutaway.clear();
         NativeRooms.clear();
         OutdoorCutaway.clear();
-        FreeOutdoorCutaway.clear();
         RoofModels.clear();
         OpeningFade.clear();
+        ObjectFade.clear();
         RoofEdges.clear();
         RoomWallOcclusion.clear();
         RoomBoundary.clear();
@@ -88,38 +77,29 @@ public final class Interior {
             List<Layout.Rect> targets = visibleRooms.targets();
             int floor = (int) Math.floor(player.getZ());
             ArrayList<Layout.Rect> upper = new ArrayList<>(rooms);
-            HashSet<Long> nativeSquares = new HashSet<>();
             boolean nativeMode = false;
             if (player instanceof zombie.characters.IsoPlayer local
                     && player.getCurrentSquare() != null
-                    && (!occupiedRoom.isEmpty() || CameraController.nativeFixedView())) {
+                    && !occupiedRoom.isEmpty()) {
                 try (NativeCutaway nativeCut = new NativeCutaway(IsoWorld.instance.getCell(), local)) {
                     nativeCut.prepare(local);
-                    int nx = (int) Math.floor(player.getX()), ny = (int) Math.floor(player.getY());
-                    long now = System.currentTimeMillis();
+                    // Native room selection supplies the intended space; geometry below
+                    // follows the real camera rather than fixed isometric wall offsets.
+                    targets = nativeCut.rooms.isEmpty() ? occupiedRoom : List.copyOf(nativeCut.rooms);
                     if (CameraController.nativeFixedView()) {
-                        // Outdoors the cached, directional native adapter below
-                        // replaces this legacy per-frame square scan.
-                        if (!occupiedRoom.isEmpty()) {
-                            for (int y = ny - 12; y <= ny + 12; y++) {
-                                for (int x = nx - 12; x <= nx + 12; x++) {
-                                    var square = IsoWorld.instance.getCell().getGridSquare(x, y, floor);
-                                    if (square != null && nativeCut.cuts(square, now)) {
-                                        nativeSquares.add(tileKey(x, y));
-                                    }
-                                }
-                            }
-                        }
                         rooms.clear();
                         rooms.addAll(nativeCut.rooms);
                         nativeMode = true;
                     }
                     upper.clear();
-                    upper.addAll(nativeCut.upper);
-                    // Roof rooms without a conventional building still use their room footprint.
-                    if (!nativeMode) {
-                        upper.addAll(nativeCut.rooms);
+                    var own = player.getCurrentSquare().getBuilding();
+                    if (own != null && own.getDef() != null) {
+                        var b = own.getDef();
+                        upper.add(new Layout.Rect(b.getX(), b.getY(), b.getW(), b.getH()));
                     }
+                    // Nearby buildings are selected below using the actual camera,
+                    // never the original isometric projection's occluder list.
+                    upper.addAll(targets);
                     upper.addAll(rooms);
                 } catch (RuntimeException error) {
                     report(error);
@@ -138,9 +118,7 @@ public final class Interior {
                     occupiedRoom.isEmpty()
                                     && player.getCurrentSquare() != null
                                     && player instanceof zombie.characters.IsoPlayer local
-                            ? (CameraController.nativeFixedView()
-                                    ? OutdoorCutaway.capture(local)
-                                    : FreeOutdoorCutaway.capture(local, sight))
+                            ? OutdoorCutaway.capture(local, sight)
                             : null;
             if (outdoor != null) {
                 upper.clear();
@@ -150,7 +128,7 @@ public final class Interior {
             if (!occupiedRoom.isEmpty() && player instanceof zombie.characters.IsoPlayer local) {
                 // The original isometric candidates cannot track a rotated camera.
                 // Reuse cached local building prisms indoors, without scanning walls.
-                var neighbours = FreeOutdoorCutaway.captureUpper(local, sight);
+                var neighbours = OutdoorCutaway.captureUpper(local, sight);
                 var own = player.getCurrentSquare().getBuilding();
                 ArrayList<Layout.Rect> selected = new ArrayList<>();
                 for (var b : neighbours.buildings()) {
@@ -175,136 +153,19 @@ public final class Interior {
             var foreign = RoomWallOcclusion.capture(player, targets, sight);
             var boundary = RoomBoundary.capture(targets);
             HashSet<Wall> blocked = new HashSet<>();
-            // Enumerate the real contour, including short concave runs and boundaries
-            // outside the local foreign-wall scan. Rectangle seams are absent.
-            for (var wall : contourWalls(targets, boundary, floor)) {
-                if (roomFace(targets, wall.x(), wall.y(), wall.kind(), wall.kind() == 1 ? sight.cy() : sight.cx())
-                        > 0) {
-                    blocked.add(wall);
-                }
-            }
-            int cx = (int) Math.floor(player.getX()), cy = (int) Math.floor(player.getY());
-            // Indoor selection is already complete: actual contour + cached foreign
-            // relations. The legacy 21x21 targets and 25x25 scan were unused here.
+            // Every selected wall must obstruct a protected target. Do not add
+            // entire camera-facing room contours without an occlusion test.
             if (outdoor != null) {
-                ArrayList<OutdoorCutaway.Wall> visibleWalls = new ArrayList<>();
                 for (var wall : outdoor.walls()) {
-                    // The surrounding protection samples may cross a nearby wall.
-                    // Only planes actually between the character and eye can hide.
-                    float plane = wall.kind() == 1 ? wall.y() : wall.x();
-                    float axis = wall.kind() == 1 ? player.getY() : player.getX();
-                    float eyeAxis = wall.kind() == 1 ? sight.cy() : sight.cx();
-                    if ((plane - axis) * Math.signum(eyeAxis - axis) <= 0.06f) {
-                        continue;
-                    }
                     blocked.add(new Wall(wall.x(), wall.y(), floor, wall.kind()));
-                    visibleWalls.add(wall);
-                }
-                outdoor = new OutdoorCutaway.Selection(outdoor.buildings(), outdoor.upper(), List.copyOf(visibleWalls));
-            } else if (occupiedRoom.isEmpty()) {
-                ArrayList<Layout.Sight> roomSight = new ArrayList<>();
-                // Sample all locally selected rooms, including native adjacent rooms.
-                // This world-space extent does not grow when the camera zooms out.
-                for (int y = cy - 10; y <= cy + 10; y++) {
-                    for (int x = cx - 10; x <= cx + 10; x++) {
-                        if (!Layout.contains(occupiedRoom.isEmpty() ? rooms : occupiedRoom, x, y)) {
-                            continue;
-                        }
-                        var target = IsoWorld.instance.getCell().getGridSquare(x, y, floor);
-                        if (target == null || target.getRoom() == null) {
-                            continue;
-                        }
-                        roomSight.add(
-                                new Layout.Sight(
-                                        x + 0.5f,
-                                        y + 0.5f,
-                                        floor * STOREY + 0.8f,
-                                        sight.cx(),
-                                        sight.cy(),
-                                        sight.cup(),
-                                        floor));
-                    }
-                }
-                int radius = roomSight.isEmpty() ? 6 : 12;
-                for (int y = cy - radius; y <= cy + radius; y++) {
-                    for (int x = cx - radius; x <= cx + radius; x++) {
-                        var square = IsoWorld.instance.getCell().getGridSquare(x, y, floor);
-                        if (square == null) {
-                            continue;
-                        }
-                        for (int kind = 1; kind <= 2; kind++) {
-                            // Only wall properties: furniture, doors and floor contents are not
-                            // candidates.
-                            boolean wall =
-                                    square.getProperties().has(kind == 1 ? "WallN" : "WallW")
-                                            || square.getProperties()
-                                                    .has(kind == 1 ? IsoFlagType.WallN : IsoFlagType.WallW)
-                                            || square.getProperties().has(kind == 1 ? "WallNW" : "WallSE")
-                                            || square.getProperties()
-                                                    .has(
-                                                            kind == 1
-                                                                    ? zombie.iso.SpriteDetails.IsoFlagType.cutN
-                                                                    : zombie.iso.SpriteDetails.IsoFlagType.cutW);
-                            if (!wall) {
-                                continue;
-                            }
-                            if (nativeMode) {
-                                // Sampling adjacent rooms must not cut through their shared
-                                // wall behind the player. The wall plane must lie toward
-                                // the camera along its own normal axis. A center-point dot
-                                // test incorrectly treats diagonal/long rear walls as front.
-                                float plane = kind == 1 ? y : x;
-                                float playerAxis = kind == 1 ? player.getY() : player.getX();
-                                float cameraAxis = kind == 1 ? sight.cy() : sight.cx();
-                                float toward = cameraAxis - playerAxis;
-                                if (Math.abs(toward) < 0.0001f || (plane - playerAxis) * Math.signum(toward) < -0.02f) {
-                                    continue;
-                                }
-                            }
-                            // North/west walls belong to one tile but bound two tiles.
-                            // An exterior tile can own a wall of a selected indoor room.
-                            int otherX = x - (kind == 2 ? 1 : 0), otherY = y - (kind == 1 ? 1 : 0);
-                            boolean roomBoundary =
-                                    Layout.contains(rooms, x, y) || Layout.contains(rooms, otherX, otherY);
-                            if (nativeMode
-                                    && !nativeSquares.contains(tileKey(x, y))
-                                    && !nativeSquares.contains(tileKey(otherX, otherY))
-                                    && !roomBoundary) {
-                                continue;
-                            }
-                            int chunkX = Math.floorDiv(x, 8), chunkY = Math.floorDiv(y, 8);
-                            int owner = (Math.floorMod(y, 8) * 8 + Math.floorMod(x, 8)) * 4 + kind;
-                            boolean obscures = sight.hidesOwner(owner, floor, chunkX, chunkY);
-                            if (!obscures) {
-                                for (Layout.Sight target : roomSight) {
-                                    if (target.hidesOwner(owner, floor, chunkX, chunkY, 12f)) {
-                                        obscures = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (obscures) {
-                                blocked.add(new Wall(x, y, floor, kind));
-                            }
-                        }
-                    }
                 }
             }
             for (var wall : foreign.hidden()) {
                 blocked.add(new Wall(wall.x(), wall.y(), wall.floor(), wall.kind()));
             }
-            long now = System.nanoTime();
-            float step = previousTime == 0 ? 0 : Math.min(0.1f, (now - previousTime) / 1_000_000_000f) / 0.22f;
-            previousTime = now;
-            for (Wall wall : blocked) {
-                fades.putIfAbsent(wall, 0f);
-            }
-            fades.replaceAll(
-                    (wall, value) -> Math.max(0, Math.min(1, value + (blocked.contains(wall) ? step : -step))));
-            fades.entrySet().removeIf(entry -> entry.getValue() <= 0 && !blocked.contains(entry.getKey()));
             ArrayList<Fading> walls = new ArrayList<>();
-            for (var entry : fades.entrySet()) {
-                walls.add(new Fading(entry.getKey(), entry.getValue()));
+            for (Wall wall : blocked) {
+                walls.add(new Fading(wall, 1f));
             }
             java.util.Comparator<Fading> roomFacingFirst =
                     java.util.Comparator.comparingInt(
@@ -323,11 +184,15 @@ public final class Interior {
             if (walls.size() > MAX_WALLS) {
                 walls.subList(MAX_WALLS, walls.size()).clear();
             }
+            walls =
+                    WallTopology.capture(
+                            walls, IsoWorld.instance.getCell(), CutawayProjection.Camera.perspective(sight), MAX_WALLS);
             long costSelection = System.nanoTime();
             var openings =
                     occupiedRoom.isEmpty() && outdoor == null
                             ? new OpeningFade.Capture(List.of(), Map.of())
                             : OpeningFade.capture(player, outdoor == null ? targets : upper, sight, outdoor, blocked);
+            openings = ObjectFade.capture(openings, IsoWorld.instance.getCell(), player, floor, System.nanoTime());
             long costOpenings = System.nanoTime();
             if (occupiedRoom.isEmpty() && outdoor == null) {
                 upper.clear();
@@ -400,34 +265,6 @@ public final class Interior {
         }
     }
 
-    private static long tileKey(int x, int y) {
-        return ((long) x << 32) ^ (y & 0xffffffffL);
-    }
-
-    private static List<Wall> contourWalls(List<Layout.Rect> rooms, List<RoomBoundary.Run> boundary, int floor) {
-        Object cell = IsoWorld.instance.getCell();
-        long now = System.nanoTime();
-        Contour old = contour;
-        if (old != null
-                && old.cell == cell
-                && old.floor == floor
-                && old.rooms.equals(rooms)
-                && now - old.time < 150_000_000L) {
-            return old.walls;
-        }
-        ArrayList<Wall> walls = new ArrayList<>();
-        for (var run : boundary) {
-            for (int offset = 0; offset < run.length(); offset++) {
-                int x = run.x() + (run.kind() == 1 ? offset : 0), y = run.y() + (run.kind() == 2 ? offset : 0);
-                if (wallAt(x, y, floor, run.kind())) {
-                    walls.add(new Wall(x, y, floor, run.kind()));
-                }
-            }
-        }
-        contour = new Contour(cell, floor, List.copyOf(rooms), now, List.copyOf(walls));
-        return contour.walls;
-    }
-
     /** +1 camera-side room boundary, -1 far boundary, 0 not a boundary. */
     static int roomFace(List<Layout.Rect> rooms, int x, int y, int kind, float cameraAxis) {
         boolean inside = Layout.contains(rooms, x, y);
@@ -439,21 +276,6 @@ public final class Interior {
         // An owner tile lies on the positive side of a north/west wall plane.
         float interiorSide = inside ? 1f : -1f;
         return (cameraAxis - plane) * interiorSide < 0 ? 1 : -1;
-    }
-
-    private static boolean wallAt(int x, int y, int floor, int kind) {
-        var square = IsoWorld.instance.getCell().getGridSquare(x, y, floor);
-        if (square == null) {
-            return false;
-        }
-        var props = square.getProperties();
-        return props.has(kind == 1 ? "WallN" : "WallW")
-                || props.has(kind == 1 ? "WallNW" : "WallSE")
-                || props.has(kind == 1 ? IsoFlagType.WallN : IsoFlagType.WallW)
-                || props.has(
-                        kind == 1
-                                ? zombie.iso.SpriteDetails.IsoFlagType.cutN
-                                : zombie.iso.SpriteDetails.IsoFlagType.cutW);
     }
 
     public static void roomCulling() {
@@ -507,7 +329,11 @@ public final class Interior {
         }
         if (s.outdoor()) {
             for (var f : s.walls()) {
-                if (f.wall().x() == x && f.wall().y() == y && f.wall().kind() == kind && f.amount() > 0) {
+                if (!f.maskOnly()
+                        && f.wall().x() == x
+                        && f.wall().y() == y
+                        && f.wall().kind() == kind
+                        && f.amount() > 0) {
                     return true;
                 }
             }
@@ -535,7 +361,7 @@ public final class Interior {
             return false;
         }
         for (var f : s.walls()) {
-            if (f.wall().x() == x && f.wall().y() == y && f.wall().kind() == kind && f.amount() > 0) {
+            if (!f.maskOnly() && f.wall().x() == x && f.wall().y() == y && f.wall().kind() == kind && f.amount() > 0) {
                 return true;
             }
         }

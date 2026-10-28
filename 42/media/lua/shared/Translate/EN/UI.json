@@ -1,4 +1,6 @@
 {
+    "UI_OldPoint_WallCutawayDebug": "Wall cutaway debug colors",
+    "UI_OldPoint_WallCutawayDebugHelp": "Overhead only. Green marks positions matching selected wall rules. Red shows the portions that would be cut, kept visible for inspection. Apply to switch without restarting.",
     "UI_OldPoint_RotationKey": "Camera rotation key",
     "UI_OldPoint_RotationKeyHelp": "Hold and move the mouse to rotate overhead view. Default: middle mouse button. Click to bind a mouse button or a single keyboard key; clear to disable. Unavailable with the fixed vanilla angle.",
     "UI_OldPoint_VisionNone": "None",
