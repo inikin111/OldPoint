@@ -10,7 +10,7 @@
     "UI_OldPoint_Name": "OldPoint",
     "UI_OldPoint_MinimumDistance": "Minimum view distance",
     "UI_OldPoint_MaximumDistance": "Maximum view distance",
-    "UI_OldPoint_DistanceHelp": "100 is the default distance; range 10–600. Minimum cannot exceed maximum.",
+    "UI_OldPoint_DistanceHelp": "100 is the reference distance; maximum is 600. The closest view is limited to vanilla's closest zoom and corrected when entering a game.",
     "UI_OldPoint_ThreeViewCycle": "Add isometric view to Shift+O cycle (keep shaders)",
     "UI_OldPoint_NativeFixedView": "Use vanilla fixed camera angle",
     "UI_OldPoint_PlayerOutline": "White outline on occluded parts of the player",

@@ -10,7 +10,7 @@
     "UI_OldPoint_Name": "OldPoint",
     "UI_OldPoint_MinimumDistance": "最小视距",
     "UI_OldPoint_MaximumDistance": "最大视距",
-    "UI_OldPoint_DistanceHelp": "100 为默认距离；范围 10–600。最小视距不能超过最大视距。",
+    "UI_OldPoint_DistanceHelp": "100 为基准距离；最远可到 600。最近端受原版最近缩放限制，进入游戏后自动校正。",
     "UI_OldPoint_ThreeViewCycle": "将俯视模式加入 Shift+O 循环（保留光影）",
     "UI_OldPoint_NativeFixedView": "是否使用原版固定视角",
     "UI_OldPoint_PlayerOutline": "人物被遮挡的部分显示白色轮廓",

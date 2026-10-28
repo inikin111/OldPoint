@@ -39,7 +39,7 @@ function Invoke-JavaTest {
 
 # Compile only the suites being run, into one isolated test output directory.
 $tests = @()
-if ($selected -contains 'Hooks') { $tests += 'HookInliningTest' }
+if ($selected -contains 'Hooks') { $tests += 'HookInliningTest', 'ProjectionDepthTest' }
 if ($selected -contains 'Occlusion') { $tests += 'OcclusionRulesTest', 'CutawayGeometryTest', 'CutawayProjectionTest' }
 if ($selected -contains 'Reference') { $tests += 'NativeWallContour', 'NativeWallContourTest', 'CutawayProjectionTest' }
 $testOut = Join-Path $repo 'java\build\suite-tests'
@@ -51,7 +51,7 @@ if ($tests.Count -gt 0) {
 }
 
 if ($selected -contains 'Camera') {
-    foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py')) {
+    foreach ($runner in @('run_camera_tests.py', 'run_orbit_tests.py', 'run_capture_tests.py', 'run_drawing_tests.py', 'run_zoom_tests.py')) {
         Invoke-PythonTest "java\tests\$runner" @('--jdk', $Jdk)
     }
 }
@@ -65,6 +65,7 @@ if ($selected -contains 'Occlusion') {
 }
 if ($selected -contains 'Hooks') {
     Invoke-JavaTest 'HookInliningTest'
+    Invoke-JavaTest 'ProjectionDepthTest'
 }
 if ($selected -contains 'Reference') {
     Invoke-JavaTest 'NativeWallContourTest'
