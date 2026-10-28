@@ -30,6 +30,10 @@ public final class Bridge {
         Zoom.limits(minimum, maximum);
     }
 
+    public static double nativeMinimumDistance() {
+        return Zoom.nativeMinimumDistance();
+    }
+
     public static void setQolWheelRouting(boolean value) {
         Zoom.qolWheelRouting(value);
     }

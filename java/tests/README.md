@@ -8,7 +8,9 @@
 | Camera | OrbitInputTest | 插值、松手停止、光标锁定、焦点与帧率差异 |
 | Camera | CameraCaptureTest | 坐标、普通视角覆盖旧标记、帧复用和隔离 |
 | Camera | CameraDrawingTest | 快照读取、线程隔离和异常清理 |
+| Camera | ZoomLimitsTest | 原版最近缩放换算、滚轮范围与视距记忆恢复 |
 | Hooks | HookInliningTest | 实际生产回调通过 ByteBuddy 内联到外部包后可以执行 |
+| Hooks | ProjectionDepthTest | 投影与逆投影、Iris 和超分辨率参数、普通帧隔离及五个 Viewpoint 挂接入口 |
 | Occlusion | CutawaySelectionTest | 模拟世界中执行生产室内外选择，检查前后墙、目标与建筑选择 |
 | Occlusion | WallTopologyCaptureTest / WallContourTest | 实体邻墙、对象身份、两端轮廓、组合面、语义隔离和容量 |
 | Occlusion | ObjectFadeTest | 同对象各表示共享透明度、缓存推进、恢复、快照和上下文隔离 |

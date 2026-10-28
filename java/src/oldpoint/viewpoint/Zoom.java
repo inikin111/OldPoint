@@ -1,6 +1,7 @@
 package oldpoint.viewpoint;
 
 import zombie.input.GameKeyboard;
+import zombie.core.Core;
 import zombie.input.Mouse;
 import zombie.ui.UIManager;
 import viewpoint.platform.SettingsWindow;
@@ -9,6 +10,7 @@ import viewpoint.platform.SettingsWindow;
 public final class Zoom {
     private static double minimum = 10;
     private static double maximum = 600;
+    private static double nativeMinimum = 10;
     private static double current = 100;
     private static double target = 100;
     private static double remembered = 100;
@@ -21,7 +23,20 @@ public final class Zoom {
     private Zoom() {}
 
     private static double clamp(double value) {
-        return Math.max(minimum, Math.min(maximum, value));
+        double lower = Math.max(minimum, nativeMinimum);
+        return Math.max(lower, Math.min(Math.max(lower, maximum), value));
+    }
+
+    /** Native zoom and Layout's cameraZoom express the same tile scale at the camera target plane. */
+    public static synchronized double nativeMinimumDistance() {
+        double nativeZoom = Core.getInstance().getMinZoom();
+        if (Double.isFinite(nativeZoom) && nativeZoom > 0) {
+            nativeMinimum = Math.max(10, Math.min(600, nativeZoom * 100.0 / Layout.CAMERA_ZOOM_SCALE));
+        }
+        target = clamp(target);
+        current = clamp(current);
+        remembered = clamp(remembered);
+        return nativeMinimum;
     }
 
     public static synchronized void limits(double min, double max) {
@@ -56,6 +71,7 @@ public final class Zoom {
     }
 
     public static synchronized float factor() {
+        nativeMinimumDistance();
         long now = System.nanoTime();
         double seconds = lastUpdate == 0 ? 0 : Math.min(0.1, (now - lastUpdate) * 1e-9);
         lastUpdate = now;
