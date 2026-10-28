@@ -1,6 +1,4 @@
 {
-    "UI_OldPoint_WallCutawayDebug": "墙体裁剪调试着色",
-    "UI_OldPoint_WallCutawayDebugHelp": "仅在 OldPoint 俯视下生效。绿色表示匹配选中墙规则的位置，红色显示本来会裁掉的部分，并暂时保留红区供观察。应用设置后立即切换。",
     "UI_OldPoint_RotationKey": "相机旋转快捷键",
     "UI_OldPoint_RotationKeyHelp": "按住并移动鼠标旋转俯视角，默认鼠标中键。点击可绑定其他鼠标按键或键盘单键，清除后禁用旋转。固定原版视角时不生效。",
     "UI_OldPoint_VisionNone": "无",

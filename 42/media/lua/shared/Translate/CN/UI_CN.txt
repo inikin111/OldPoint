@@ -54,5 +54,3 @@ UI_OldPoint_MemorySaving = "省内存",
 UI_OldPoint_MemoryNative = "沿用 Viewpoint 设置",
 
 UI_OldPoint_MemoryHelp = "自动：按物理内存选择 8GB、16GB、32GB 和大于 32GB 四档缓存上限；原设置更低时保留原值。Windows 下同时检测系统提交余量与空闲物理内存，压力增大时收紧缓存和构建队列，余量持续恢复后逐步放宽。省内存：使用最低档缓存与地板细节。沿用 Viewpoint：不施加额外预算限制。光影必需缓冲仍沿用原预算。修改后建议重启游戏完整生效。缓存预算不是游戏总内存上限，降低预算可能增加重建或降低细节。",
-UI_OldPoint_WallCutawayDebug = "墙体裁剪调试着色",
-UI_OldPoint_WallCutawayDebugHelp = "仅在 OldPoint 俯视下生效。绿色表示匹配选中墙规则的位置，红色显示本来会裁掉的部分，并暂时保留红区供观察。应用设置后立即切换。",

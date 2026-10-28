@@ -50,10 +50,6 @@ public final class Bridge {
         PlayerOutline.enabled(enabled);
     }
 
-    public static void setWallCutawayDebug(boolean enabled) {
-        OcclusionRendering.setWallDebug(enabled);
-    }
-
     public static void setTreeClearing(boolean enabled, double radius) {
         TreeClearing.configure(enabled, radius);
     }

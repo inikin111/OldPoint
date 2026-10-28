@@ -58,7 +58,6 @@ final class OutdoorCutaway {
     private static Candidates candidates;
     private static Cached cached;
     private static final Map<BuildingDef, Long> held = new HashMap<>();
-    private static long lastReport;
 
     private OutdoorCutaway() {}
 
@@ -145,19 +144,6 @@ final class OutdoorCutaway {
             }
         }
         var result = new OutdoorCutaway.Selection(List.copyOf(selected), List.copyOf(upper), List.copyOf(walls));
-        if (now - lastReport > 5_000_000_000L
-                && (!selected.isEmpty() || old != null && !old.result.buildings().isEmpty())) {
-            lastReport = now;
-            System.out.println(
-                    "[OldPoint] camera cutaway: candidates="
-                            + buildings.size()
-                            + ", buildings="
-                            + selected.size()
-                            + ", walls="
-                            + walls.size()
-                            + ", floor="
-                            + floor);
-        }
         cached = new Cached(cell, player, floor, includeWalls, eye, now, result);
         return result;
     }

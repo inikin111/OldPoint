@@ -17,8 +17,6 @@ final class OcclusionShaders {
         flat in vec3 vOPPlantBase;
         uniform int uOPInterior;
         uniform int uOPRoundedWalls;
-        uniform int uOPCutawayDebug;
-        float opWallDebug=0.0;
         uniform vec3 uOPOrigin;
         uniform float uOPFloor;
         uniform int uOPForeignUpperCount;
@@ -43,28 +41,6 @@ final class OcclusionShaders {
         uniform int uOPWallCount;
         uniform int uOPStructureWallCount;
         uniform int uOPBoundaryCount;
-        vec3 oldPointWallDebugColor(vec3 albedo) {
-          if (uOPCutawayDebug==0 || opWallDebug<0.5) return albedo;
-          return opWallDebug>1.5 ? vec3(1.0,0.06,0.12) : vec3(0.12,1.0,0.2);
-        }
-        void oldPointDebugWallSelection() {
-          if (uOPInterior==0 || uOPCutawayDebug==0 || abs(vNormal.y)>0.5) return;
-          vec3 world=vOPStructure+uOPOrigin;
-          if (world.y<=uOPFloor-2.4494896+0.05 || world.y>uOPFloor+0.05) return;
-          vec2 tile=-world.xz;
-          ivec4 candidates=opSpatial(tile);
-          // Color matching positions before the normal structural filters, so a
-          // selected wall rejected by those filters remains identifiable in green.
-          for (int n=0;n<candidates.y;n++) {
-            int i=opSpatialRule(candidates.x+n);
-            vec4 w=opWall(i);
-            bool north=w.w<1.5;
-            float plane=north?abs(tile.y-w.y):abs(tile.x-w.x);
-            float along=north?tile.x-w.x:tile.y-w.y;
-            if (opFade(i)>0.0 && abs(w.z-(uOPFloor-2.4494896))<0.05
-                && plane<0.06 && along>=-0.01 && along<=1.01) opWallDebug=1.0;
-          }
-        }
         float oldPointWallNoise(vec3 world) {
           ivec3 cell=ivec3(floor(world*24.0));
           uint hash=uint(cell.x)*73856093u ^ uint(cell.y)*19349663u ^ uint(cell.z)*83492791u;
@@ -200,8 +176,7 @@ final class OcclusionShaders {
                 if (ends.x>0.5) target=max(target,oldPointRoundedWallHeight(along));
                 if (ends.y>0.5) target=max(target,oldPointRoundedWallHeight(1.0-along));
                 if (amount>0.0 && world.y>w.z+target*2.4494896) {
-                  if (uOPCutawayDebug!=0) opWallDebug=2.0;
-                  else discard;
+                  discard;
                 }
               } else {
                 fade=max(fade,amount);
@@ -211,8 +186,7 @@ final class OcclusionShaders {
           // Only structural wall fading needs camera-stable coverage. Opening,
           // furniture and decoration art keeps its original fine screen dither.
           if (fade>0.0 && oldPointWallNoise(world)<fade) {
-            if (uOPCutawayDebug!=0) opWallDebug=2.0;
-            else discard;
+            discard;
           }
         }
         """;
@@ -234,13 +208,13 @@ final class OcclusionShaders {
             source =
                     source.replaceAll(
                                     "(gAlbedo = vec4\\([^;]+;)",
-                                    "$1\n  gAlbedo.rgb = oldPointWallDebugColor(gAlbedo.rgb*oldPointRoomLight());")
+                                    "$1\n  gAlbedo.rgb = gAlbedo.rgb*oldPointRoomLight();")
                             .replace(
                                     "vec3 color = shade(",
-                                    "s.albedo = oldPointWallDebugColor(s.albedo*oldPointRoomLight());\n  vec3 color = shade(")
+                                    "s.albedo = s.albedo*oldPointRoomLight();\n  vec3 color = shade(")
                             .replace(
                                     "vec3 color = wetGround(",
-                                    "s.albedo = oldPointWallDebugColor(s.albedo*oldPointRoomLight());\n  vec3 color = wetGround(");
+                                    "s.albedo = s.albedo*oldPointRoomLight();\n  vec3 color = wetGround(");
             // Declare before the existing surface helpers as well as our cutaway.
             source =
                     source.replace("flat in vec4 vRect;", "flat in vec4 vRect;\nflat in int vOPOpening;")
@@ -294,27 +268,27 @@ final class OcclusionShaders {
                 || path.equals("puddle.frag")) {
             return source.replace(
                     "void main() {",
-                    TERRAIN + "\nvoid main() {\n  oldPointDebugWallSelection();\n  oldPointInterior();");
+                    TERRAIN + "\nvoid main() {\n  oldPointInterior();");
         }
         if (path.equals("iris/mesh_fragment.glsl")) {
             return source.replace("void prologue() {", TERRAIN + "\nvoid prologue() {")
                     .replace(
                             "  unpackMesh();",
-                            "  unpackMesh();\n  oldPointDebugWallSelection();\n  oldPointInterior();")
+                            "  unpackMesh();\n  oldPointInterior();")
                     .replace(
                             "return surface(uv);",
-                            "vec4 opSurface=surface(uv); opSurface.rgb=oldPointWallDebugColor(opSurface.rgb*oldPointRoomLight()); return opSurface;");
+                            "vec4 opSurface=surface(uv); opSurface.rgb=opSurface.rgb*oldPointRoomLight(); return opSurface;");
         }
         if (path.equals("iris/far_shell_fragment.glsl")) {
             return source.replace(
                             "void prologue() {",
-                            TERRAIN + "\nvoid prologue() {\n  oldPointDebugWallSelection();\n  oldPointInterior();")
+                            TERRAIN + "\nvoid prologue() {\n  oldPointInterior();")
                     .replace(
                             "return shellTexel;",
-                            "return vec4(oldPointWallDebugColor(shellTexel.rgb*oldPointRoomLight()),shellTexel.a);")
+                            "return vec4(shellTexel.rgb*oldPointRoomLight(),shellTexel.a);")
                     .replace(
                             "return c * shellTexel.rgb;",
-                            "return oldPointWallDebugColor(c * shellTexel.rgb * oldPointRoomLight());")
+                            "return c * shellTexel.rgb * oldPointRoomLight();")
                     // A built near chunk still supplies detailed geometry in
                     // overhead mode even when the eye is outside the near radius.
                     .replace(

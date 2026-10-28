@@ -45,13 +45,7 @@
 
 Reference 适合遮挡算法变更或依赖升级时运行。投影查询、参考结果和轮廓模型结果写入 `java/build/`；不把运行报告写回 `docs/`。覆盖和局限见[测试说明](../java/tests/README.md)。
 
-## 诊断与研究工具
-
-`tools/summarize_capture_cost.py` 汇总本机游戏日志，例如：
-
-```powershell
-python tools/summarize_capture_cost.py --since 2026-10-28 --output .local/capture-cost.json
-```
+## 原版参考工具
 
 额外的原版图集对照工具 `tools/verify_native_wall_contours.py` 需要本机反编译源码与贴图，使用 `--help` 查看参数；它不属于默认测试。研究报告、截图和一次性结果保存在 `.local/`，可复现的临时查询和测试输出保存在 `java/build/`。
 

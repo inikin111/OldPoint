@@ -54,5 +54,3 @@ UI_OldPoint_MemorySaving = "Memory saving",
 UI_OldPoint_MemoryNative = "Viewpoint settings",
 
 UI_OldPoint_MemoryHelp = "Automatic selects cache ceilings for 8GB, 16GB, 32GB and above-32GB physical RAM tiers, preserving lower existing settings. On Windows, available system commit and free physical RAM both trigger tighter cache and build queue limits; limits relax gradually after sustained recovery. Memory saving uses the lowest cache and floor detail tier. Viewpoint settings adds no budget restrictions. Required shader buffers retain their native budget. Restart after changing for full effect. Cache budgets are not a whole-game memory cap; lower budgets may increase rebuilding or reduce detail.",
-UI_OldPoint_WallCutawayDebug = "Wall cutaway debug colors",
-UI_OldPoint_WallCutawayDebugHelp = "Overhead only. Green marks positions matching selected wall rules. Red shows the portions that would be cut, kept visible for inspection. Apply to switch without restarting.",
