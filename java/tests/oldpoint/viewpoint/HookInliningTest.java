@@ -26,7 +26,8 @@ public final class HookInliningTest {
         check("AimCamera$NativeCursorPatch", false);
         check("AimCamera$NativePanPatch", false);
         check("TerrainCamera$ThirdPatch", true);
-        System.out.println("PASS 3 production Hooks inlined into a foreign package");
+        check("Bridge$OverheadCrosshairPatch", false);
+        System.out.println("PASS 4 production Hooks inlined into a foreign package");
     }
 
     private static void check(String nestedName, boolean hasFrame) throws Exception {
@@ -111,6 +112,26 @@ public final class HookInliningTest {
                 target.getMethod("probe", parameters).invoke(null, hasFrame ? new Object[] {null} : new Object[0]);
         if (!Boolean.TRUE.equals(result)) {
             throw new AssertionError("Unexpected inactive Hook result: " + name);
+        }
+        if (nestedName.equals("Bridge$OverheadCrosshairPatch")) {
+            var controller = Class.forName("oldpoint.viewpoint.CameraController");
+            var topDown = controller.getDeclaredField("topDown");
+            topDown.setAccessible(true);
+            viewpoint.core.View.enabled = true;
+            topDown.setBoolean(null, true);
+            try {
+                if (!Boolean.FALSE.equals(target.getMethod("probe").invoke(null))) {
+                    throw new AssertionError("Overhead must skip the centre crosshair drawing body");
+                }
+                viewpoint.input.FreeCam.active = true;
+                if (!Boolean.TRUE.equals(target.getMethod("probe").invoke(null))) {
+                    throw new AssertionError("Free camera must retain its original crosshair behavior");
+                }
+            } finally {
+                topDown.setBoolean(null, false);
+                viewpoint.core.View.enabled = false;
+                viewpoint.input.FreeCam.active = false;
+            }
         }
     }
 }

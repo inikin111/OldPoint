@@ -121,6 +121,7 @@ final class Zoom {
 }
 final class OrbitInput {
     static float delta;
+    static void beforeUpdate(boolean dragging) { }
     static void reset() { }
     static float read(float yaw, boolean dragging) { return yaw + (dragging ? delta : 0); }
 }

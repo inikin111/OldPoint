@@ -207,6 +207,10 @@ public final class Bridge {
         CameraController.finishOrbitInput();
     }
 
+    public static void prepareOrbitInput() {
+        CameraController.prepareOrbitInput();
+    }
+
     public static boolean nativeMove(Object value) {
         return CameraController.nativeMove(value);
     }
@@ -424,11 +428,20 @@ public final class Bridge {
         @Patch.OnEnter
         public static void enter() {
             Bridge.syncCursor();
+            Bridge.prepareOrbitInput();
         }
 
         @Patch.OnExit
         public static void exit() {
             Bridge.finishOrbitInput();
+        }
+    }
+
+    @Patch(className = "viewpoint.SceneDrawer", methodName = "drawCrosshair", strictMatch = true)
+    public static final class OverheadCrosshairPatch {
+        @Patch.OnEnter(skipOn = true)
+        public static boolean enter() {
+            return Bridge.drawTopDown();
         }
     }
 

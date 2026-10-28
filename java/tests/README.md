@@ -5,6 +5,7 @@
 | 文件 | 作用 |
 | --- | --- |
 | `oldpoint/viewpoint/CameraControllerTest.java` | 镜头生命周期、模式切换、记忆返回和输入状态 |
+| `oldpoint/viewpoint/OrbitInputTest.java` | 实际拖动输入的短时插值、角度滞后上限、松手停止、光标原位锁定及大幅拖动；由 `run_orbit_tests.py` 提供虚拟 GLFW 和确定时钟 |
 | `oldpoint/viewpoint/CameraCaptureTest.java` | 帧快照、坐标、帧复用和隔离 |
 | `oldpoint/viewpoint/CameraDrawingTest.java` | 绘制时读取快照、线程隔离和异常清理 |
 | `oldpoint/viewpoint/HookInliningTest.java` | 用真实 ByteBuddy 将生产回调内联到外部包并执行，检查跨包访问 |
