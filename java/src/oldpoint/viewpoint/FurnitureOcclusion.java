@@ -3,6 +3,7 @@ package oldpoint.viewpoint;
 import java.util.ArrayList;
 import java.util.List;
 import zombie.characters.IsoGameCharacter;
+import zombie.characters.IsoPlayer;
 import zombie.iso.IsoGridSquare;
 import zombie.iso.IsoObject;
 import zombie.iso.RoomDef;
@@ -66,7 +67,7 @@ final class FurnitureOcclusion {
             }
             if (square.getRoom() == room) {
                 if (blocksCharacter(bounds)) {
-                    return 0.65f;
+                    return 1f - 0.66f;
                 }
                 // A stacked furniture piece shares its floor footprint with the
                 // obstructing lower piece even when its own bounds start overhead.
@@ -79,11 +80,12 @@ final class FurnitureOcclusion {
                                         bounds.x2(),
                                         bounds.y2(),
                                         bounds.z2()))) {
-                    return 0.65f;
+                    return 1f - 0.66f;
                 }
                 return 0;
             }
-            return blocksOccupiedRoom(bounds) ? 1f : 0;
+            int index = player instanceof IsoPlayer local ? local.getIndex() : 0;
+            return blocksOccupiedRoom(bounds) ? (square.isCanSee(index) ? 0.75f : 1f) : 0;
         }
 
         boolean doorCandidate(IsoGridSquare square, OpeningEdge.Edge edge) {

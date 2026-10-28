@@ -64,7 +64,7 @@ final class OcclusionRendering {
             p.setInt("uOPInterior", enabled ? 1 : 0);
         }
         if (p.has("uOPRoundedWalls")) {
-            p.setInt("uOPRoundedWalls", enabled && !s.outdoor() && !s.occupiedRooms().isEmpty() ? 1 : 0);
+            p.setInt("uOPRoundedWalls", enabled ? 1 : 0);
         }
         if (p.has("uOPTreeEnabled")) {
             p.setInt("uOPTreeEnabled", enabled && TreeClearing.active() && s.trees().cells().length > 0 ? 1 : 0);

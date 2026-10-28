@@ -1,17 +1,20 @@
 param(
-    [Parameter(Mandatory = $true)][string]$Jdk,
-    [Parameter(Mandatory = $true)][string]$ZombieBuddy,
-    [Parameter(Mandatory = $true)][string]$Viewpoint,
-    [Parameter(Mandatory = $true)][string]$Game
+    [string]$Jdk,
+    [string]$ZombieBuddy,
+    [string]$Viewpoint,
+    [string]$Game,
+    [switch]$SkipPackage
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'environment.ps1')
+$dependencies = Resolve-OldPointEnvironment -Jdk $Jdk -ZombieBuddy $ZombieBuddy -Viewpoint $Viewpoint -Game $Game
+$Jdk = $dependencies.Jdk
+$ZombieBuddy = $dependencies.ZombieBuddy
+$Viewpoint = $dependencies.Viewpoint
+$Game = $dependencies.Game
 $javac = Join-Path $Jdk 'bin\javac.exe'
 $jar = Join-Path $Jdk 'bin\jar.exe'
-foreach ($file in @($javac, $jar, $ZombieBuddy, $Viewpoint, $Game)) {
-    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing build dependency: $file" }
-}
-
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $buildRoot = Join-Path $repo 'java\build'
 $classes = Join-Path $buildRoot 'classes'
@@ -22,7 +25,6 @@ if ([IO.Path]::GetFullPath($classes) -ne (Join-Path $buildRoot 'classes')) {
 }
 if (Test-Path -LiteralPath $classes) { Remove-Item -LiteralPath $classes -Recurse -Force }
 New-Item -ItemType Directory -Path $classes -Force | Out-Null
-New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
 
 $sources = Get-ChildItem -LiteralPath (Join-Path $repo 'java\src') -Recurse -File -Filter '*.java' |
     Select-Object -ExpandProperty FullName
@@ -30,5 +32,10 @@ $sources = Get-ChildItem -LiteralPath (Join-Path $repo 'java\src') -Recurse -Fil
 if ($LASTEXITCODE -ne 0) { throw 'OldPoint Java compilation failed' }
 & $jar --create --file $staged -C $classes .
 if ($LASTEXITCODE -ne 0) { throw 'OldPoint JAR packaging failed' }
-Copy-Item -LiteralPath $staged -Destination $output -Force
-Write-Output "Built $output"
+if (-not $SkipPackage) {
+    New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force | Out-Null
+    Copy-Item -LiteralPath $staged -Destination $output -Force
+    Write-Output "Packaged $output"
+} else {
+    Write-Output "Built $staged"
+}

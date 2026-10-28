@@ -105,8 +105,8 @@ final class OcclusionShaders {
           if (uOPFloor<=0.0 && (vOPSourceBase>=uOPFloor-0.015
               || vOPSourceBase < -99999.0 && (vOPStructure+uOPOrigin).y>=uOPFloor-0.015)) discard;
           if (vOPOpening>=0) {
-            float noise=fract(52.9829189*fract(dot(floor(gl_FragCoord.xy),vec2(0.06711056,0.00583715))));
-            if (noise<opOpeningMin(vOPOpening).w) discard;
+            // Use the same coverage and frame-noise convention as rigid models.
+            if (fadeNoise()>=1.0-opOpeningMin(vOPOpening).w) discard;
             return;
           }
           vec3 world = vOPStructure + uOPOrigin;
@@ -169,14 +169,15 @@ final class OcclusionShaders {
                 && world.y>=w.z) {
               float amount=opFade(i);
               if (uOPRoundedWalls!=0 && abs(w.z-(uOPFloor-2.4494896))<0.05) {
-                // Existing fade progress lowers the profile instead of removing
-                // coverage. Preserve the original complete wall at amount == 0.
+                // Switch straight to the selected profile; never sweep the
+                // cut height down or back up the wall over time.
                 vec2 ends=opWallEnds(i);
                 float target=0.1;
                 if (ends.x>0.5) target=max(target,oldPointRoundedWallHeight(along));
                 if (ends.y>0.5) target=max(target,oldPointRoundedWallHeight(1.0-along));
-                float height=mix(1.0,target,clamp(amount,0.0,1.0));
-                if (amount>0.0 && world.y>w.z+height*2.4494896) discard;
+                if (amount>0.0 && world.y>w.z+target*2.4494896) {
+                  discard;
+                }
               } else {
                 fade=max(fade,amount);
               }
@@ -184,7 +185,9 @@ final class OcclusionShaders {
           }
           // Only structural wall fading needs camera-stable coverage. Opening,
           // furniture and decoration art keeps its original fine screen dither.
-          if (fade>0.0 && oldPointWallNoise(world)<fade) discard;
+          if (fade>0.0 && oldPointWallNoise(world)<fade) {
+            discard;
+          }
         }
         """;
 
@@ -203,11 +206,15 @@ final class OcclusionShaders {
         if (terrainFragment) {
             // Preserve native room blackness only when that native feature is enabled.
             source =
-                    source.replaceAll("(gAlbedo = vec4\\([^;]+;)", "$1\n  gAlbedo.rgb *= oldPointRoomLight();")
-                            .replace("vec3 color = shade(", "s.albedo *= oldPointRoomLight();\n  vec3 color = shade(")
+                    source.replaceAll(
+                                    "(gAlbedo = vec4\\([^;]+;)",
+                                    "$1\n  gAlbedo.rgb = gAlbedo.rgb*oldPointRoomLight();")
+                            .replace(
+                                    "vec3 color = shade(",
+                                    "s.albedo = s.albedo*oldPointRoomLight();\n  vec3 color = shade(")
                             .replace(
                                     "vec3 color = wetGround(",
-                                    "s.albedo *= oldPointRoomLight();\n  vec3 color = wetGround(");
+                                    "s.albedo = s.albedo*oldPointRoomLight();\n  vec3 color = wetGround(");
             // Declare before the existing surface helpers as well as our cutaway.
             source =
                     source.replace("flat in vec4 vRect;", "flat in vec4 vRect;\nflat in int vOPOpening;")
@@ -259,19 +266,29 @@ final class OcclusionShaders {
                 || path.equals("gbuffer_shell.frag")
                 || path.equals("far_shell.frag")
                 || path.equals("puddle.frag")) {
-            return source.replace("void main() {", TERRAIN + "\nvoid main() {\n  oldPointInterior();");
+            return source.replace(
+                    "void main() {",
+                    TERRAIN + "\nvoid main() {\n  oldPointInterior();");
         }
         if (path.equals("iris/mesh_fragment.glsl")) {
             return source.replace("void prologue() {", TERRAIN + "\nvoid prologue() {")
-                    .replace("  unpackMesh();", "  unpackMesh();\n  oldPointInterior();")
+                    .replace(
+                            "  unpackMesh();",
+                            "  unpackMesh();\n  oldPointInterior();")
                     .replace(
                             "return surface(uv);",
-                            "vec4 opSurface=surface(uv); opSurface.rgb*=oldPointRoomLight(); return opSurface;");
+                            "vec4 opSurface=surface(uv); opSurface.rgb=opSurface.rgb*oldPointRoomLight(); return opSurface;");
         }
         if (path.equals("iris/far_shell_fragment.glsl")) {
-            return source.replace("void prologue() {", TERRAIN + "\nvoid prologue() {\n  oldPointInterior();")
-                    .replace("return shellTexel;", "return vec4(shellTexel.rgb*oldPointRoomLight(),shellTexel.a);")
-                    .replace("return c * shellTexel.rgb;", "return c * shellTexel.rgb * oldPointRoomLight();")
+            return source.replace(
+                            "void prologue() {",
+                            TERRAIN + "\nvoid prologue() {\n  oldPointInterior();")
+                    .replace(
+                            "return shellTexel;",
+                            "return vec4(shellTexel.rgb*oldPointRoomLight(),shellTexel.a);")
+                    .replace(
+                            "return c * shellTexel.rgb;",
+                            "return c * shellTexel.rgb * oldPointRoomLight();")
                     // A built near chunk still supplies detailed geometry in
                     // overhead mode even when the eye is outside the near radius.
                     .replace(

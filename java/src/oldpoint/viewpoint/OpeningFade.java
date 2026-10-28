@@ -40,7 +40,23 @@ public final class OpeningFade {
 
     record Art(float x, float y, float z, float w) {}
 
-    record Instance(int model, float x, float y, float up, ObjectBounds bounds, Art art, float fade) {}
+    record Instance(
+            int model,
+            float x,
+            float y,
+            float up,
+            ObjectBounds bounds,
+            Art art,
+            float fade,
+            zombie.iso.IsoObject owner) {
+        Instance(int model, float x, float y, float up, ObjectBounds bounds, Art art, float fade) {
+            this(model, x, y, up, bounds, art, fade, null);
+        }
+
+        Instance withFade(float amount) {
+            return new Instance(model, x, y, up, bounds, art, amount, owner);
+        }
+    }
 
     record Capture(List<Instance> instances, Map<zombie.iso.IsoObject, Float> furniture) {}
 
@@ -102,8 +118,9 @@ public final class OpeningFade {
         if (outdoor != null) {
             faces = 31 * (31 * faces + Math.round(nearbyArea.x() * 4)) + Math.round(nearbyArea.y() * 4);
         }
+        var boundary = outdoor == null ? RoomBoundary.capture(occupied) : List.<RoomBoundary.Run>of();
         if (outdoor == null) {
-            for (var r : RoomBoundary.capture(occupied)) {
+            for (var r : boundary) {
                 faces = faces * 31 + r.face(r.kind() == 1 ? sight.cy() : sight.cx());
             }
         }
@@ -207,6 +224,34 @@ public final class OpeningFade {
                                 && doorObject
                                 && furniture.doorCandidate(square, mainEdge)
                                 && !furniture.nearWall(mainEdge);
+                boolean wholeObject =
+                        (furnitureCandidate || doorCandidate || nearby || mainEdge != null || mainDecoration != null)
+                                && (NearbyFade.eligible(object, main)
+                                        || doorObject
+                                        || object instanceof IsoWindow
+                                        || object instanceof IsoCurtain);
+                if (wholeObject) {
+                    boolean near =
+                            mainEdge != null
+                                    && (outdoor != null
+                                            ? outdoor.opening(mainEdge.x(), mainEdge.y(), mainEdge.kind())
+                                            : near(boundary, mainEdge, sight));
+                    boolean decorationHidden =
+                            mainDecoration != null
+                                    && hiddenWalls.contains(
+                                            new OcclusionSnapshot.Wall(
+                                                    mainDecoration.x(),
+                                                    mainDecoration.y(),
+                                                    floor,
+                                                    mainDecoration.kind()));
+                    float target = mainDecoration != null && (near || decorationHidden) ? 1f : near ? 0.5f : 0;
+                    if (nearby && NearbyFade.eligible(object, main)) {
+                        target = Math.max(target, NearbyFade.amount(object));
+                    }
+                    if (target > 0) {
+                        pendingFurniture.merge(object, target, Math::max);
+                    }
+                }
                 var overlay = object.getOverlaySprite();
                 var attached = object.getAttachedAnimSprite();
                 if (!nearby
@@ -258,7 +303,7 @@ public final class OpeningFade {
                                         new OcclusionSnapshot.Wall(
                                                 decoration.x(), decoration.y(), floor, decoration.kind()));
                     }
-                    if (!opening && !nearObject && !furnitureCandidate && !doorCandidate) {
+                    if (!opening && !nearObject && !furnitureCandidate && !doorCandidate && !wholeObject) {
                         continue;
                     }
                     // Combined wall/window artwork stays in structural cutaway; never fade the wall
@@ -338,7 +383,7 @@ public final class OpeningFade {
                         var bounds = new ObjectBounds(lx, ly, lz, hx, hy, hz);
                         float furnitureFade = furnitureCandidate ? furniture.fade(square, bounds) : 0;
                         float doorFade = doorCandidate ? furniture.doorFade(square, bounds) : 0;
-                        if (!opening && !nearObject && furnitureFade <= 0 && doorFade <= 0) {
+                        if (!opening && !nearObject && furnitureFade <= 0 && doorFade <= 0 && !wholeObject) {
                             continue;
                         }
                         float fade =
@@ -348,11 +393,11 @@ public final class OpeningFade {
                                                         || nearObject
                                                                 && NearbyFade.upper(sprite, lz - floor * 2.4494896f))
                                                 ? 1f
-                                                : 0.5f);
-                        if (furnitureFade > 0 || doorFade > 0) {
-                            pendingFurniture.merge(object, Math.max(furnitureFade, doorFade), Math::max);
+                                                : opening || nearObject ? 0.5f : 0);
+                        if (wholeObject) {
+                            pendingFurniture.merge(object, fade, Math::max);
                         }
-                        result.add(new Instance(model, rx, ry, up, bounds, art, fade));
+                        result.add(new Instance(model, rx, ry, up, bounds, art, fade, wholeObject ? object : null));
                     }
                 }
             }
@@ -379,5 +424,18 @@ public final class OpeningFade {
             pendingContext = null;
         }
         return capture;
+    }
+
+    private static boolean near(List<RoomBoundary.Run> boundary, OpeningEdge.Edge edge, Layout.Sight sight) {
+        for (var run : boundary) {
+            if (run.kind() == edge.kind()
+                    && run.face(edge.kind() == 1 ? sight.cy() : sight.cx()) > 0
+                    && (edge.kind() == 1
+                            ? run.y() == edge.y() && edge.x() >= run.x() && edge.x() < run.x() + run.length()
+                            : run.x() == edge.x() && edge.y() >= run.y() && edge.y() < run.y() + run.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

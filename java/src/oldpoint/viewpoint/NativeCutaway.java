@@ -5,25 +5,14 @@ import java.util.List;
 import zombie.characters.IsoPlayer;
 import zombie.iso.IsoCamera;
 import zombie.iso.IsoCell;
-import zombie.iso.IsoGridSquare;
 import zombie.iso.RoomDef;
-import zombie.iso.areas.IsoBuilding;
 
 /**
- * Native isometric decisions, evaluated only on the game capture thread. No native stencil, GL state, textures or
- * shader-pack programs are changed.
+ * Native room selection on the capture thread. Building and wall occlusion use the actual 3D camera independently of
+ * the original fixed projection.
  */
 final class NativeCutaway implements AutoCloseable {
-    private record Cached(
-            Object cell,
-            Object player,
-            Object square,
-            int floor,
-            long time,
-            List<Layout.Rect> rooms,
-            List<Layout.Rect> upper,
-            IsoBuilding[] buildings,
-            boolean orphan) {}
+    private record Cached(Object cell, Object player, Object square, int floor, long time, List<Layout.Rect> rooms) {}
 
     private static Cached cached;
 
@@ -34,18 +23,13 @@ final class NativeCutaway implements AutoCloseable {
     private final IsoCell cell;
     private final IsoCamera.FrameState state = IsoCamera.frameState;
     private final int oldIndex;
-    private final IsoBuilding[] oldBuildings;
-    private final boolean oldOrphan;
     private final int index;
     final List<Layout.Rect> rooms = new ArrayList<>();
-    final List<Layout.Rect> upper = new ArrayList<>();
 
     NativeCutaway(IsoCell cell, IsoPlayer player) {
         this.cell = cell;
         index = player.getIndex();
         oldIndex = state.playerIndex;
-        oldBuildings = cell.playerOccluderBuildingsArr[index];
-        oldOrphan = cell.occludedByOrphanStructureFlag;
         state.playerIndex = index;
     }
 
@@ -60,9 +44,6 @@ final class NativeCutaway implements AutoCloseable {
                 && old.floor == floor
                 && now - old.time < 120_000_000L) {
             rooms.addAll(old.rooms);
-            upper.addAll(old.upper);
-            cell.playerOccluderBuildingsArr[index] = old.buildings;
-            cell.occludedByOrphanStructureFlag = old.orphan;
             return;
         }
         // Viewpoint can bypass RenderTiles, so refresh native room selection
@@ -85,45 +66,11 @@ final class NativeCutaway implements AutoCloseable {
                 }
             }
         }
-        var buildings = new ArrayList<IsoBuilding>();
-        cell.GetBuildingsInFrontOfCharacter(buildings, player.getCurrentSquare(), false);
-        if (buildings.isEmpty()) {
-            cell.GetBuildingsInFrontOfCharacter(buildings, player.getCurrentSquare(), true);
-        }
-        var own = player.getCurrentSquare().getBuilding();
-        if (own != null && !buildings.contains(own)) {
-            buildings.add(own);
-        }
-        cell.playerOccluderBuildingsArr[index] = buildings.toArray(new IsoBuilding[500]);
-        // Native collapsible buildings lose levels above the walking floor.
-        // Keep this distinct from the room targets used for current-floor walls.
-        for (var building : buildings) {
-            var d = building.getDef();
-            if (d != null) {
-                upper.add(new Layout.Rect(d.getX(), d.getY(), d.getX2() - d.getX(), d.getY2() - d.getY()));
-            }
-        }
-        cached =
-                new Cached(
-                        cell,
-                        player,
-                        player.getCurrentSquare(),
-                        floor,
-                        now,
-                        List.copyOf(rooms),
-                        List.copyOf(upper),
-                        cell.playerOccluderBuildingsArr[index],
-                        cell.occludedByOrphanStructureFlag);
-    }
-
-    boolean cuts(IsoGridSquare square, long now) {
-        return cell.IsCutawaySquare(square, now);
+        cached = new Cached(cell, player, player.getCurrentSquare(), floor, now, List.copyOf(rooms));
     }
 
     @Override
     public void close() {
-        cell.playerOccluderBuildingsArr[index] = oldBuildings;
-        cell.occludedByOrphanStructureFlag = oldOrphan;
         state.playerIndex = oldIndex;
     }
 }

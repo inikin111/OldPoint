@@ -14,8 +14,6 @@ import zombie.iso.SpriteDetails.IsoFlagType;
 
 /** Native-inspired, same-floor wall/room relations, computed before drawing. */
 final class RoomWallOcclusion {
-    private static final float STOREY = 2.4494896f;
-    private static final float[] TARGET_HEIGHTS = {0.5f, 1.3f, 2.1f};
 
     record Segment(int x, int y, int floor, int kind) {}
 
@@ -169,33 +167,37 @@ final class RoomWallOcclusion {
             return previous.selection;
         }
         int playerIndex = player instanceof IsoPlayer local ? local.getIndex() : 0;
+        var camera = CutawayProjection.Camera.perspective(eye);
         HashSet<Segment> hidden = new HashSet<>();
         HashMap<Segment, Set<Long>> relations = new HashMap<>();
         for (var wall : cache.walls) {
+            var footprint =
+                    CutawayProjection.wall(new OcclusionSnapshot.Wall(wall.x, wall.y, wall.floor, wall.kind), camera);
             HashSet<Long> occluded = new HashSet<>();
-            // Like native's short directional grid samples, inspect only a few tiles
-            // behind the wall, following the actual rotating camera instead of fixed NW.
-            for (int along = 0; along < 3; along++) {
-                float wx = wall.x + (wall.kind == 1 ? (along + 0.5f) / 3 : 0);
-                float wy = wall.y + (wall.kind == 2 ? (along + 0.5f) / 3 : 0);
-                float dx = wx - eye.cx(), dy = wy - eye.cy();
-                float scale = Math.max(Math.abs(dx), Math.abs(dy));
-                if (scale < 0.001f) {
+            for (var region : occupied) {
+                // Clip to existing target rooms and the candidate scan's local
+                // extent before enumeration, including near-horizon projections.
+                var bounds =
+                        footprint.bounds(
+                                Math.max(region.x(), cx - 32),
+                                Math.max(region.y(), cy - 32),
+                                Math.min(region.x() + region.width(), cx + 33),
+                                Math.min(region.y() + region.height(), cy + 33));
+                if (bounds == null) {
                     continue;
                 }
-                dx /= scale;
-                dy /= scale;
-                for (int distance = 1; distance <= 3; distance++) {
-                    int tx = (int) Math.floor(wx + dx * distance), ty = (int) Math.floor(wy + dy * distance);
-                    if (!Layout.contains(occupied, tx, ty)) {
-                        continue;
-                    }
-                    var target = cell.getGridSquare(tx, ty, floor);
-                    if (target == null || target.getRoom() == null || !target.getCanSee(playerIndex)) {
-                        continue;
-                    }
-                    if (occludes(wall, tx + 0.5f, ty + 0.5f, eye)) {
-                        occluded.add(target.getRoomID());
+                for (int ty = bounds.y(); ty < bounds.y() + bounds.height(); ty++) {
+                    for (int tx = bounds.x(); tx < bounds.x() + bounds.width(); tx++) {
+                        if (!footprint.overlaps(tx, ty, tx + 1, ty + 1)) {
+                            continue;
+                        }
+                        var target = cell.getGridSquare(tx, ty, floor);
+                        if (target != null
+                                && target.getRoom() != null
+                                && !target.getObjects().isEmpty()
+                                && target.isCouldSee(playerIndex)) {
+                            occluded.add(target.getRoomID());
+                        }
                     }
                 }
             }
@@ -207,30 +209,6 @@ final class RoomWallOcclusion {
         Selection selection = new Selection(Set.copyOf(hidden), Map.copyOf(relations));
         result = new Result(cache, ex, ey, ez, now, selection);
         return selection;
-    }
-
-    private static boolean occludes(Segment wall, float tx, float ty, Layout.Sight eye) {
-        float denominator = (wall.kind == 1 ? ty : tx) - (wall.kind == 1 ? eye.cy() : eye.cx());
-        if (Math.abs(denominator) < 0.0001f) {
-            return false;
-        }
-        float t = ((wall.kind == 1 ? wall.y : wall.x) - (wall.kind == 1 ? eye.cy() : eye.cx())) / denominator;
-        if (t <= 0.001f || t >= 0.995f) {
-            return false;
-        }
-        float along = wall.kind == 1 ? eye.cx() + (tx - eye.cx()) * t : eye.cy() + (ty - eye.cy()) * t;
-        float start = wall.kind == 1 ? wall.x : wall.y;
-        if (along < start - 0.02f || along > start + 1.02f) {
-            return false;
-        }
-        float base = wall.floor * STOREY;
-        for (float height : TARGET_HEIGHTS) {
-            float up = eye.cup() + (base + height - eye.cup()) * t;
-            if (up > base + 0.18f && up < base + STOREY + 0.02f) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean hasWall(IsoGridSquare square, int kind) {
