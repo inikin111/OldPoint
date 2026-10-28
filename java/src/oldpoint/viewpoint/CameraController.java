@@ -554,16 +554,19 @@ final class CameraController {
     }
 
     static void finishOrbitInput() {
+        orbitYaw = OrbitInput.read(orbitYaw, topDownActive() && rotating && !nativeFixedView);
         if (!topDownActive()) {
-            OrbitInput.reset();
             return;
         }
-        orbitYaw = OrbitInput.read(orbitYaw, rotating && !nativeFixedView);
         if (rotating && !nativeFixedView && Float.isFinite(orbitYaw)) {
             rememberedOrbitYaw = orbitYaw;
         }
         Look.yaw = orbitYaw;
         Look.pitch = overheadPitch();
+    }
+
+    static void prepareOrbitInput() {
+        OrbitInput.beforeUpdate(topDownActive() && rotating && !nativeFixedView);
     }
 
     static boolean nativeMove(Object value) {
