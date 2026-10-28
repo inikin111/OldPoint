@@ -5,6 +5,8 @@ final class OcclusionRules {
     private static final float STOREY = 2.4494896f;
     static final int MAX_ROOMS = 32, MAX_WALLS = 128;
 
+    private record WallJoint(int x, int y, int floor) {}
+
     private OcclusionRules() {}
 
     static CutawayData.Data forSnapshot(OcclusionSnapshot snapshot) {
@@ -88,11 +90,30 @@ final class OcclusionRules {
             put(out, r.x() - 0.75f, r.y() - 0.75f, r.x() + r.width() + 0.75f, r.y() + r.height() + 0.75f);
         }
         int wallOffset = out.position() / 4;
+        var selected = new java.util.HashSet<OcclusionSnapshot.Wall>();
+        for (int i = 0; i < walls; i++) {
+            var f = s.walls().get(i);
+            if (f.amount() > 0) {
+                selected.add(f.wall());
+            }
+        }
+        var joints = new java.util.HashMap<WallJoint, Integer>();
+        for (var w : selected) {
+            int dx = w.kind() == 1 ? 1 : 0, dy = w.kind() == 2 ? 1 : 0;
+            joints.merge(new WallJoint(w.x(), w.y(), w.floor()), 1, Integer::sum);
+            joints.merge(new WallJoint(w.x() + dx, w.y() + dy, w.floor()), 1, Integer::sum);
+        }
         for (int i = 0; i < walls; i++) {
             var f = s.walls().get(i);
             var w = f.wall();
+            int dx = w.kind() == 1 ? 1 : 0, dy = w.kind() == 2 ? 1 : 0;
+            // Any selected wall sharing this endpoint continues the low wall,
+            // including perpendicular corners and T-junctions.
+            int own = selected.contains(w) ? 1 : 0;
+            boolean start = joints.getOrDefault(new WallJoint(w.x(), w.y(), w.floor()), 0) <= own;
+            boolean end = joints.getOrDefault(new WallJoint(w.x() + dx, w.y() + dy, w.floor()), 0) <= own;
             put(out, w.x(), w.y(), w.floor() * STOREY, w.kind());
-            put(out, f.amount(), 0, 0, 0);
+            put(out, f.amount(), start ? 1 : 0, end ? 1 : 0, 0);
         }
         for (var r : s.roofs()) {
             put(out, r.x(), r.y(), r.up(), 3);

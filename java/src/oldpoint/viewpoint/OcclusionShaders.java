@@ -16,6 +16,7 @@ final class OcclusionShaders {
         flat in int vOPCanopy;
         flat in vec3 vOPPlantBase;
         uniform int uOPInterior;
+        uniform int uOPRoundedWalls;
         uniform vec3 uOPOrigin;
         uniform float uOPFloor;
         uniform int uOPForeignUpperCount;
@@ -46,6 +47,27 @@ final class OcclusionShaders {
           hash^=hash>>13;
           hash*=1274126177u;
           return float(hash&0x00ffffffu)*(1.0/16777216.0);
+        }
+        // Fit the end silhouette to vanilla wallcutaways.png: horizontal
+        // distances span a wall tile, heights span a storey. Separate radii
+        // avoid treating that rectangular coordinate system as a square.
+        float oldPointRoundedWallHeight(float along) {
+          float x=clamp(along,0.0,1.0);
+          float highHeight=1.0, lowHeight=0.1, leftX=0.125;
+          float topWidth=0.125, topHeightRadius=0.08333333;
+          float innerWidth=0.1875, innerHeight=0.08333333;
+          float topHeight=lowHeight;
+          float arcStartX=leftX-topWidth;
+          if (x<arcStartX) {
+            topHeight=highHeight;
+          } else if (x<leftX) {
+            float t=clamp((x-arcStartX)/topWidth,0.0,1.0);
+            topHeight=highHeight-topHeightRadius+topHeightRadius*sqrt(max(0.0,1.0-t*t));
+          } else if (x<leftX+innerWidth) {
+            float t=clamp((x-(leftX+innerWidth))/innerWidth,-1.0,0.0);
+            topHeight=lowHeight+innerHeight*(1.0-sqrt(max(0.0,1.0-t*t)));
+          }
+          return topHeight;
         }
         bool oldPointRoom(vec2 tile) {
           vec2 playerTile=-(uOPPlayer+uOPOrigin).xz;
@@ -133,9 +155,7 @@ final class OcclusionShaders {
           // FLAG_GLASS also labels window-hole walls and transparent wall art.
           // Only a source matched by vOPOpening may bypass wall removal above.
           if ((vFlags & (FLAG_BILLBOARD | FLAG_FACING))!=0) return;
-          // CPU selection already checks camera obstruction against room sight
-          // lines. Hide the whole selected wall segment; a second per-fragment
-          // player/room test leaves strips above and beside the explored space.
+          // Reuse CPU obstruction selection for both wall treatments.
           if (abs(vNormal.y)>0.5) return;
           if ((vFlags & FLAG_SINGLE_SIDED)==0) return;
           float fade=0.0;
@@ -148,7 +168,18 @@ final class OcclusionShaders {
             if (plane<0.06 && along>=-0.01 && along<=1.01
                 && world.y>=w.z) {
               float amount=opFade(i);
-              fade=max(fade,amount);
+              if (uOPRoundedWalls!=0 && abs(w.z-(uOPFloor-2.4494896))<0.05) {
+                // Existing fade progress lowers the profile instead of removing
+                // coverage. Preserve the original complete wall at amount == 0.
+                vec2 ends=opWallEnds(i);
+                float target=0.1;
+                if (ends.x>0.5) target=max(target,oldPointRoundedWallHeight(along));
+                if (ends.y>0.5) target=max(target,oldPointRoundedWallHeight(1.0-along));
+                float height=mix(1.0,target,clamp(amount,0.0,1.0));
+                if (amount>0.0 && world.y>w.z+height*2.4494896) discard;
+              } else {
+                fade=max(fade,amount);
+              }
             }
           }
           // Only structural wall fading needs camera-stable coverage. Opening,

@@ -268,6 +268,7 @@ public final class CutawayData {
         vec4 opRoom(int i) { return texelFetch(uOPData,uOPRoomOffset+i); }
         vec4 opWall(int i) { return texelFetch(uOPData,uOPWallOffset+i*2); }
         float opFade(int i) { return texelFetch(uOPData,uOPWallOffset+i*2+1).x; }
+        vec2 opWallEnds(int i) { return texelFetch(uOPData,uOPWallOffset+i*2+1).yz; }
         vec4 opRoofRect(int i) { return texelFetch(uOPData,uOPRoofOffset+i); }
         #endif
         """;
