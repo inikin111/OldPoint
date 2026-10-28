@@ -73,7 +73,7 @@ final class NativeRooms {
         var targets = new ArrayList<Layout.Rect>(occupied);
         var shades = new ArrayList<Shade>();
         try {
-            var nativeVisible = LightingJNI.getVisibleRooms(player.getPlayerNum());
+            var nativeVisible = LightingJNI.getVisibleRooms(player.getIndex());
             // Lighting is not ready yet: preserve the current room, rather than
             // interpreting an absent native list as all rooms being invisible.
             if (nativeVisible == null) {

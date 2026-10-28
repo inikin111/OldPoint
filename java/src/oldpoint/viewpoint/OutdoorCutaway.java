@@ -83,7 +83,7 @@ final class OutdoorCutaway {
         var oldCell = nativeCut.cell;
         boolean oldOrphan = cell.occludedByOrphanStructureFlag;
         try {
-            int index = player.getPlayerNum();
+            int index = player.getIndex();
             state.playerIndex = index;
             state.camCharacter = player;
             state.camCharacterSquare = square;

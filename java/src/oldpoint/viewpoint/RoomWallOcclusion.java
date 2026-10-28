@@ -168,7 +168,7 @@ final class RoomWallOcclusion {
                 && now - previous.time < 120_000_000L) {
             return previous.selection;
         }
-        int playerIndex = player instanceof IsoPlayer local ? local.getPlayerNum() : 0;
+        int playerIndex = player instanceof IsoPlayer local ? local.getIndex() : 0;
         HashSet<Segment> hidden = new HashSet<>();
         HashMap<Segment, Set<Long>> relations = new HashMap<>();
         for (var wall : cache.walls) {

@@ -42,7 +42,7 @@ final class NativeCutaway implements AutoCloseable {
 
     NativeCutaway(IsoCell cell, IsoPlayer player) {
         this.cell = cell;
-        index = player.getPlayerNum();
+        index = player.getIndex();
         oldIndex = state.playerIndex;
         oldBuildings = cell.playerOccluderBuildingsArr[index];
         oldOrphan = cell.occludedByOrphanStructureFlag;
