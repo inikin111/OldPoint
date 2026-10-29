@@ -14,6 +14,7 @@
 | Occlusion | CutawaySelectionTest | 模拟世界中执行生产室内外选择，检查前后墙、目标与建筑选择 |
 | Occlusion | WallTopologyCaptureTest / WallContourTest | 实体邻墙、对象身份、两端轮廓、组合面、语义隔离和容量 |
 | Occlusion | ObjectFadeTest | 同对象各表示共享透明度、缓存推进、恢复、快照和上下文隔离 |
+| Occlusion | run_opening_tests.py | 原版落地玻璃窗属性、贴图/模型包半透明绑定、未选中状态及实体墙保护 |
 | Occlusion | OcclusionRulesTest | 生产规则打包后的端点、楼层和强度 |
 | Occlusion | CutawayGeometryTest / CutawayProjectionTest | 旋转、空间范围、投影边界与退化输入 |
 | Reference | NativeWallContourTest | 原版列选择与端点映射 |

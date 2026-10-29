@@ -59,6 +59,9 @@ if ($selected -contains 'Occlusion') {
     foreach ($runner in @('run_cutaway_tests.py', 'run_object_fade_tests.py')) {
         Invoke-PythonTest "java\tests\$runner" @('--jdk', $Jdk)
     }
+    Invoke-PythonTest 'java\tests\run_opening_tests.py' @(
+        '--jdk', $Jdk, '--tiles', (Join-Path (Split-Path -Parent $Game) 'media\newtiledefinitions.tiles')
+    )
     foreach ($test in @('OcclusionRulesTest', 'CutawayGeometryTest', 'CutawayProjectionTest')) {
         Invoke-JavaTest $test
     }

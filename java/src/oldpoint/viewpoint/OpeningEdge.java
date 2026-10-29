@@ -107,6 +107,19 @@ final class OpeningEdge {
         return ofSprite(sprite, x, y);
     }
 
+    /** Native commercial floor-height panes live in walls_ sheets but are glass openings. */
+    static boolean glassPane(zombie.iso.sprite.IsoSprite sprite) {
+        if (sprite == null) {
+            return false;
+        }
+        var p = sprite.getProperties();
+        return "Glass".equalsIgnoreCase(p.get("MaterialType"))
+                && (p.has(IsoFlagType.WindowN)
+                        || p.has(IsoFlagType.WindowW)
+                        || p.has(IsoFlagType.windowN)
+                        || p.has(IsoFlagType.windowW));
+    }
+
     static boolean doorFrame(zombie.iso.sprite.IsoSprite sprite) {
         if (sprite == null) {
             return false;

@@ -306,10 +306,11 @@ public final class OpeningFade {
                     if (!opening && !nearObject && !furnitureCandidate && !doorCandidate && !wholeObject) {
                         continue;
                     }
-                    // Combined wall/window artwork stays in structural cutaway; never fade the wall
-                    // with its window.
+                    // Opaque combined wall/window art stays structural. Native glass panes may
+                    // also use walls_ sheets and must keep their own half-opacity binding.
                     if (sprite.name.toLowerCase(java.util.Locale.ROOT).startsWith("walls_")
                             && !(doorObject && sprite == main)
+                            && !OpeningEdge.glassPane(sprite)
                             && !OpeningEdge.doorFrame(sprite)
                             && sprite.getType() != zombie.iso.SpriteDetails.IsoObjectType.windowFN
                             && sprite.getType() != zombie.iso.SpriteDetails.IsoObjectType.windowFW) {
