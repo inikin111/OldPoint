@@ -132,9 +132,10 @@ final class OutdoorCutaway {
                                 && !p.has(kind == 1 ? "WallNW" : "WallSE")) {
                             continue;
                         }
-                        var footprint = CutawayProjection.wall(new OcclusionSnapshot.Wall(x, y, floor, kind), camera);
+                        var wall = new OcclusionSnapshot.Wall(x, y, floor, kind);
+                        var footprint = CutawayProjection.wall(wall, camera);
                         for (var target : targets) {
-                            if (footprint.overlaps(target)) {
+                            if (CutawayGeometry.blocks(wall, target, camera, footprint)) {
                                 walls.add(new OutdoorCutaway.Wall(x, y, kind));
                                 break;
                             }

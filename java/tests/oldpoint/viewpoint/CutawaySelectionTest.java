@@ -191,5 +191,21 @@ public final class CutawaySelectionTest {
         square(2, 0).visible = false;
         OutdoorCutaway.clear();
         check("building not hidden by unseen space", OutdoorCutaway.capture(player, NORTH).buildings().isEmpty());
+
+        player = reset();
+        player.square = square(0, 0);
+        player.x = 0.5f;
+        player.y = 0.85f;
+        var touchingWall = square(0, 1);
+        touchingWall.props.flags.add("WallN");
+        touchingWall.room = new IsoRoom();
+        touchingWall.building = new IsoBuilding();
+        var sameSide = new Layout.Sight(0.5f, 0.85f, 0.8f, 0.5f, -20, 12, 0);
+        check("touching exterior wall behind player retained",
+                !OutdoorCutaway.capture(player, sameSide).opening(0, 1, 1));
+        OutdoorCutaway.clear();
+        var oppositeSide = new Layout.Sight(0.5f, 0.85f, 0.8f, 0.5f, 20, 12, 0);
+        check("touching exterior wall between camera and player still hidden",
+                OutdoorCutaway.capture(player, oppositeSide).opening(0, 1, 1));
     }
 }

@@ -19,7 +19,22 @@ final class CutawayGeometry {
     private CutawayGeometry() {}
 
     static boolean blocks(OcclusionSnapshot.Wall wall, Target target, Layout.Sight eye) {
-        return CutawayProjection.wall(wall, CutawayProjection.Camera.perspective(eye)).overlaps(target);
+        var camera = CutawayProjection.Camera.perspective(eye);
+        return blocks(wall, target, camera, CutawayProjection.wall(wall, camera));
+    }
+
+    static boolean blocks(OcclusionSnapshot.Wall wall, Target target, CutawayProjection.Camera camera,
+            CutawayProjection.Footprint footprint) {
+        double plane = wall.kind() == 1 ? wall.y() : wall.x();
+        double targetSide = (wall.kind() == 1 ? target.y() : target.x()) - plane;
+        double cameraSide = (wall.kind() == 1 ? camera.y() : camera.x()) - camera.w() * plane;
+        // Keep a target region on its centre's side of the wall. A body touching
+        // a rear wall must not reach through it and select it as an obstruction.
+        // The full footprint is still used along the wall and around its ends.
+        if (targetSide * cameraSide >= 0) {
+            return false;
+        }
+        return footprint.overlaps(target);
     }
 
     /** Camera-facing outdoor interest policy; independent of the projection's overlap calculation. */

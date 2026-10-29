@@ -23,6 +23,24 @@ public final class CutawayGeometryTest {
         check("wall beyond camera stays complete", !blocks(0, -5, 1, BODY, NORTH));
         check("wall at target does not self-occlude", !blocks(0, 1, 1, BODY, NORTH));
         check("parallel view does not cut", !blocks(0, 0, 2, BODY, NORTH));
+        var northTouch = new Layout.Sight(0.5f, 0.85f, 0.8f, 0.5f, -20, 12, 0);
+        check("body protection does not cross a rear north wall",
+                !blocks(0, 1, 1, CutawayGeometry.Target.body(0.5, 0.85), northTouch));
+        var southTouch = new Layout.Sight(0.5f, 1.15f, 0.8f, 0.5f, 20, 12, 0);
+        check("body protection does not cross a rear south wall",
+                !blocks(0, 1, 1, CutawayGeometry.Target.body(0.5, 1.15), southTouch));
+        var westTouch = new Layout.Sight(0.85f, 0.5f, 0.8f, -20, 0.5f, 12, 0);
+        check("body protection does not cross a rear west wall",
+                !blocks(1, 0, 2, CutawayGeometry.Target.body(0.85, 0.5), westTouch));
+        var eastTouch = new Layout.Sight(1.15f, 0.5f, 0.8f, 20, 0.5f, 12, 0);
+        check("body protection does not cross a rear east wall",
+                !blocks(1, 0, 2, CutawayGeometry.Target.body(1.15, 0.5), eastTouch));
+        check("body centred on wall plane does not select it",
+                !blocks(0, 1, 1, CutawayGeometry.Target.body(0.5, 1.0), northTouch));
+        check("genuine foreground wall still protects the body",
+                blocks(0, 1, 1, CutawayGeometry.Target.body(0.5, 1.15), northTouch));
+        check("body footprint still protects around a wall endpoint",
+                blocks(0, 1, 1, CutawayGeometry.Target.body(1.1, 1.15), northTouch));
         check(
                 "projection reach is not capped at three tiles",
                 blocks(0, 0, 1, CutawayGeometry.Target.point(0.5f, 7), NORTH));
