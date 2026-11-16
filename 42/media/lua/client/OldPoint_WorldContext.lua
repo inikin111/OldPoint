@@ -31,6 +31,7 @@ Events.OnGameStart.Add(function()
     ISObjectClickHandler.doRClick = function(object, x, y)
         if not overhead() then return rightClick(object, x, y) end
         local target = OldPointBridge.beginWorldContext(object)
+        OldPointDebugTarget = target
         local ok, result = pcall(rightClick, target, x, y)
         OldPointBridge.endWorldContext()
         if not ok then error(result) end

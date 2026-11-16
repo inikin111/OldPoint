@@ -6,14 +6,14 @@ This repository contains the source code for the OldPoint Project Zomboid mod. I
 
 ## 版本 / Version
 
-此兼容分支基于 **0.6.154**，针对 Project Zomboid **42.22** 与 Viewpoint nightly **0.1.7-rc4** 编译。游戏内效果仍需验证；创意工坊已发布版本可能不同。
+当前版本为 **0.6.156**，适配 Project Zomboid **42.22** 与 Project Viewpoint 正式版 **0.1.7**。游戏内效果仍需验证；创意工坊已发布版本可能不同。
 
-This compatibility branch is based on **0.6.154** and builds against Project Zomboid **42.22** and Viewpoint nightly **0.1.7-rc4**. In-game behavior still needs verification. The published Workshop version may differ.
+The current version is **0.6.156**, targeting Project Zomboid **42.22** and the official Project Viewpoint **0.1.7** release. In-game behavior still needs verification. The published Workshop version may differ.
 
 ## 依赖 / Dependencies
 
 - Project Zomboid Build 42.22
-- Viewpoint nightly 0.1.7-rc4 (the regular 0.1.6 release is incompatible with this build)
+- Project Viewpoint 0.1.7 (the 0.1.6 release is incompatible with this build)
 - ZombieBuddy 2.3.0 or later, for Java patching
 - JDK with `javac --release 17` support
 

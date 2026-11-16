@@ -59,5 +59,14 @@
     "UI_OldPoint_MemoryAuto": "自动（按物理内存）",
     "UI_OldPoint_MemorySaving": "省内存",
     "UI_OldPoint_MemoryNative": "沿用 Viewpoint 设置",
-    "UI_OldPoint_MemoryHelp": "自动：按物理内存选择 8GB、16GB、32GB 和大于 32GB 四档缓存上限；原设置更低时保留原值。Windows 下同时检测系统提交余量与空闲物理内存，压力增大时收紧缓存和构建队列，余量持续恢复后逐步放宽。省内存：使用最低档缓存与地板细节。沿用 Viewpoint：不施加额外预算限制。光影必需缓冲仍沿用原预算。修改后建议重启游戏完整生效。缓存预算不是游戏总内存上限，降低预算可能增加重建或降低细节。"
+    "UI_OldPoint_MemoryHelp": "自动：按物理内存选择 8GB、16GB、32GB 和大于 32GB 四档缓存上限；原设置更低时保留原值。Windows 下同时检测系统提交余量与空闲物理内存，压力增大时收紧缓存和构建队列，余量持续恢复后逐步放宽。省内存：使用最低档缓存与地板细节。沿用 Viewpoint：不施加额外预算限制。光影必需缓冲仍沿用原预算。修改后建议重启游戏完整生效。缓存预算不是游戏总内存上限，降低预算可能增加重建或降低细节。",
+    "UI_OldPoint_ItemMenu": "是否开启 Viewpoint 物品菜单",
+    "UI_OldPoint_ItemMenuHelp": "在俯视角显示 Viewpoint 自带的物品悬停菜单。默认关闭。",
+    "UI_OldPoint_DebugMenu": "OldPoint 调试",
+    "UI_OldPoint_DebugInfo": "显示物体信息",
+    "UI_OldPoint_DebugCopy": "复制信息",
+    "UI_OldPoint_DebugName": "名称",
+    "UI_OldPoint_DebugClose": "关闭",
+    "UI_OldPoint_ShowDebugMenu": "是否显示 DEBUG 调试菜单",
+    "UI_OldPoint_ShowDebugMenuHelp": "在俯视角的右键菜单中显示物体调试工具。默认关闭。"
 }

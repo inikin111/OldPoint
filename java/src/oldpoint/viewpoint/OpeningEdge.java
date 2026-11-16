@@ -14,15 +14,36 @@ final class OpeningEdge {
 
     private OpeningEdge() {}
 
+    static boolean translucentFurniture(zombie.iso.sprite.IsoSprite sprite) {
+        if (sprite == null) {
+            return false;
+        }
+        var p = sprite.getProperties();
+        String group = p.get("GroupName");
+        return "Counter".equalsIgnoreCase(p.get("CustomName"))
+                || "Shelves".equalsIgnoreCase(p.get("CustomName")) && "Metal Wall".equalsIgnoreCase(group)
+                || "Rack".equalsIgnoreCase(p.get("CustomName")) && "Coat".equalsIgnoreCase(group)
+                || "Hood".equalsIgnoreCase(p.get("CustomName")) && "Extractor".equalsIgnoreCase(group)
+                || "Counter".equalsIgnoreCase(p.get("CustomName")) && group != null
+                && group.toLowerCase(java.util.Locale.ROOT).contains("floating");
+    }
+
     /** Wall decorations declare their supporting face; floor furniture is excluded. */
     static Edge decoration(zombie.iso.sprite.IsoSprite sprite, int x, int y) {
         if (sprite == null) {
             return null;
         }
         var p = sprite.getProperties();
-        if (p.has(IsoFlagType.attachedFloor)
+        boolean extractorHood = "Hood".equalsIgnoreCase(p.get("CustomName"))
+                && "Extractor".equalsIgnoreCase(p.get("GroupName"));
+        String furnitureGroup = p.get("GroupName");
+        boolean floatingCounter = "Counter".equalsIgnoreCase(p.get("CustomName"))
+                && "WallObject".equalsIgnoreCase(p.get("MoveType"))
+                && furnitureGroup != null
+                && furnitureGroup.toLowerCase(java.util.Locale.ROOT).contains("floating");
+        if (!translucentFurniture(sprite) && !extractorHood && !floatingCounter && (p.has(IsoFlagType.attachedFloor)
                 || p.has(IsoFlagType.IsFloorAttached)
-                || p.has(IsoFlagType.attachedCeiling)) {
+                || p.has(IsoFlagType.attachedCeiling))) {
             return null;
         }
         if (p.has(IsoFlagType.attachedN)) {
@@ -40,7 +61,14 @@ final class OpeningEdge {
         // Several vanilla wall hangings (for example clocks) have Facing and
         // MoveType but no attachedN/W flag. Map their face to the same wall
         // segment without guessing from a whole tile or its rendered bounds.
-        if (!"WallObject".equalsIgnoreCase(p.get("MoveType"))
+        String custom = p.get("CustomName");
+        String group = p.get("GroupName");
+        String label = ((custom == null ? "" : custom) + " " + (group == null ? "" : group))
+                .toLowerCase(java.util.Locale.ROOT);
+        boolean cookerHood = label.contains("range hood") || label.contains("cooker hood")
+                || label.contains("extractor hood") || label.contains("oven hood")
+                || label.contains("stove hood");
+        if ((!"WallObject".equalsIgnoreCase(p.get("MoveType")) && !cookerHood)
                 || p.has(IsoFlagType.WallN)
                 || p.has(IsoFlagType.WallW)
                 || p.has(IsoFlagType.WallNW)

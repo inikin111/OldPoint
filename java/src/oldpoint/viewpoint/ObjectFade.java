@@ -31,7 +31,11 @@ final class ObjectFade {
         }
         IdentityHashMap<IsoObject, Float> wanted = new IdentityHashMap<>();
         for (var entry : targets.furniture().entrySet()) {
-            wanted.put(entry.getKey(), 1f - entry.getValue());
+            float fade = entry.getValue();
+            if (entry.getKey().getContainerCount() > 0) {
+                fade = Math.min(fade, 0.5f);
+            }
+            wanted.put(entry.getKey(), 1f - fade);
         }
         IdentityHashMap<IsoObject, List<OpeningFade.Instance>> current = new IdentityHashMap<>();
         ArrayList<OpeningFade.Instance> result = new ArrayList<>();
@@ -43,7 +47,8 @@ final class ObjectFade {
                 continue;
             }
             current.computeIfAbsent(owner, key -> new ArrayList<>()).add(instance);
-            wanted.merge(owner, 1f - instance.fade(), Math::min);
+            float fade = owner.getContainerCount() > 0 ? Math.min(instance.fade(), 0.5f) : instance.fade();
+            wanted.merge(owner, 1f - fade, Math::min);
         }
         sources.putAll(current);
         Map<IsoObject, Float> visible =

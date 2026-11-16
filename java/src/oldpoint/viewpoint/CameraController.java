@@ -53,18 +53,11 @@ final class CameraController {
     private CameraController() {}
 
     static void setEnabled(boolean value) {
-        if (!value) {
-            directEntryRequested = false;
-            directReturnMode = null;
-        }
-        if (!value && topDown) {
-            leaveTopDown();
-        }
         enabled = value;
     }
 
     static boolean topDownActive() {
-        return enabled && topDown && View.enabled && !FreeCam.active;
+        return topDown && View.enabled && !FreeCam.active;
     }
 
     static void setAutomaticCameraModes(double enter, double leave, double driver, double leaveDriver) {
@@ -85,7 +78,6 @@ final class CameraController {
                 || player == null
                 || player.isDead()
                 || FreeCam.active
-                || mode == 3 && !enabled
                 || UIManager.isModalVisible()
                 || SettingsWindow.shown()
                 || GameTime.isGamePaused()) {
@@ -413,8 +405,7 @@ final class CameraController {
 
     static void enterOverheadRemembered() {
         var player = zombie.characters.IsoPlayer.players[0];
-        if (!enabled
-                || FreeCam.active
+        if (FreeCam.active
                 || player == null
                 || player.isDead()
                 || UIManager.isModalVisible()

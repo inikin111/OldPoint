@@ -13,7 +13,7 @@ final class NearbyFade {
     record Area(float x, float y) {
         boolean contains(float px, float py) {
             float dx = px - x, dy = py - y;
-            return dx * dx + dy * dy <= RADIUS * RADIUS;
+            return false; // Fixed-radius proximity fading has been removed.
         }
     }
 

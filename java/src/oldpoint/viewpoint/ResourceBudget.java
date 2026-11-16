@@ -20,7 +20,7 @@ public final class ResourceBudget {
         {512, 96, 1024, 256, 192, 256, 384, 512, 768, 1536, 256, 96}
     };
     private static final int[] QUEUES = {24, 48, 64, 96}, THREADS = {1, 2, 3, 4};
-    private static volatile int mode; // 0 automatic, 1 memory saving, 2 native
+    private static volatile int mode = 2; // 0 automatic, 1 memory saving, 2 native
     private static volatile int pressureLevel; // 0 normal, 1 low headroom, 2 critical
     private static volatile long freePhysical = -1, commitHeadroom = -1;
     private static volatile Object maxCooking, cookThreads;

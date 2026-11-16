@@ -66,22 +66,6 @@ final class FurnitureOcclusion {
                 return 0;
             }
             if (square.getRoom() == room) {
-                if (blocksCharacter(bounds)) {
-                    return 1f - 0.66f;
-                }
-                // A stacked furniture piece shares its floor footprint with the
-                // obstructing lower piece even when its own bounds start overhead.
-                if (bounds.z() > floor * STOREY + 1.05f
-                        && blocksCharacter(
-                                new ObjectBounds(
-                                        bounds.x(),
-                                        bounds.y(),
-                                        floor * STOREY + 0.08f,
-                                        bounds.x2(),
-                                        bounds.y2(),
-                                        bounds.z2()))) {
-                    return 1f - 0.66f;
-                }
                 return 0;
             }
             int index = player instanceof IsoPlayer local ? local.getIndex() : 0;

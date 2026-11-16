@@ -94,9 +94,9 @@ local maximumDistance = options:addSlider(
 
 local memoryPolicy = options:addComboBox("memoryPolicy", textOrFallback("UI_OldPoint_MemoryPolicy", "Memory policy"),
     textOrFallback("UI_OldPoint_MemoryHelp", "Automatic adjusts Viewpoint cache ceilings for physical RAM. Memory saving uses smaller caches and floor detail. Native keeps Viewpoint budgets. Restart after changing for full effect."))
-memoryPolicy:addItem(textOrFallback("UI_OldPoint_MemoryAuto", "Automatic (physical RAM)"), true)
+memoryPolicy:addItem(textOrFallback("UI_OldPoint_MemoryAuto", "Automatic (physical RAM)"))
 memoryPolicy:addItem(textOrFallback("UI_OldPoint_MemorySaving", "Memory saving"))
-memoryPolicy:addItem(textOrFallback("UI_OldPoint_MemoryNative", "Viewpoint settings"))
+memoryPolicy:addItem(textOrFallback("UI_OldPoint_MemoryNative", "Viewpoint settings"), true)
 
 local treeClearing = options:addTickBox(
     "treeClearing", textOrFallback("UI_OldPoint_TreeClearing", "Tree outlines in overhead view"), true
@@ -107,7 +107,15 @@ local treeClearingRadius = options:addSlider(
     textOrFallback("UI_OldPoint_TreeClearingHelp", "Show folded trees and 3D trees as outlines within the same circle, centred one radius toward the camera. Radius 0 disables the effect.")
 )
 
+local itemMenu = options:addTickBox("viewpointItemMenu", getText("UI_OldPoint_ItemMenu"), false,
+    getText("UI_OldPoint_ItemMenuHelp"))
+
+local debugMenu = options:addTickBox("showDebugMenu", getText("UI_OldPoint_ShowDebugMenu"), false,
+    getText("UI_OldPoint_ShowDebugMenuHelp"))
+
 local mirrorOptions = {
+    debugMenu,
+    itemMenu,
     enterOverheadKey, resetOverheadKey, rotationControl, rotationKey, stepAngle,
     stepLeft, stepRight, viewCycle, nativeFixedView, enteringBuilding, leavingBuilding,
     enteringDriver, leavingDriver, aimingCamera, releasedCamera, playerOutline,
@@ -127,7 +135,7 @@ local visionOptions = {
     visionRangeIndicator=true, treeClearing=true, treeClearingRadiusExpanded=true
 }
 local aimingOptions = { aimingSystem=true }
-local experimentalOptions = {
+local experimentalOptions = { viewpointItemMenu=true, showDebugMenu=true,
     enteringBuildingMode=true, leavingBuildingMode=true, enteringDriverMode=true,
     leavingDriverMode=true, aimingCameraMode=true, releasedCameraMode=true
 }
@@ -199,8 +207,12 @@ local function pullMirror()
 end
 
 local function applyOptions()
+    OldPointDebugMenuEnabled = debugMenu:getValue() == true
+    if OldPointBridge and OldPointBridge.setItemMenuEnabled then
+        OldPointBridge.setItemMenuEnabled(itemMenu:getValue() == true)
+    end
     if OldPointBridge and OldPointBridge.setMemoryPolicy then
-        OldPointBridge.setMemoryPolicy((tonumber(memoryPolicy:getValue()) or 1) - 1)
+        OldPointBridge.setMemoryPolicy((tonumber(memoryPolicy:getValue()) or 3) - 1)
     end
     if OldPointBridge and OldPointBridge.setAimingSystem then
         OldPointBridge.setAimingSystem((tonumber(aimingSystem:getValue()) or 1) - 1)

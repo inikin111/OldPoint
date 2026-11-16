@@ -231,11 +231,12 @@ public final class OpeningFade {
                                         || object instanceof IsoWindow
                                         || object instanceof IsoCurtain);
                 if (wholeObject) {
+                    var supportingEdge = mainEdge != null ? mainEdge : mainDecoration;
                     boolean near =
-                            mainEdge != null
+                            supportingEdge != null
                                     && (outdoor != null
-                                            ? outdoor.opening(mainEdge.x(), mainEdge.y(), mainEdge.kind())
-                                            : near(boundary, mainEdge, sight));
+                                            ? outdoor.opening(supportingEdge.x(), supportingEdge.y(), supportingEdge.kind())
+                                            : near(boundary, supportingEdge, sight));
                     boolean decorationHidden =
                             mainDecoration != null
                                     && hiddenWalls.contains(
@@ -245,6 +246,9 @@ public final class OpeningFade {
                                                     floor,
                                                     mainDecoration.kind()));
                     float target = mainDecoration != null && (near || decorationHidden) ? 1f : near ? 0.5f : 0;
+                    if (target > 0 && OpeningEdge.translucentFurniture(main)) {
+                        target = 0.5f;
+                    }
                     if (nearby && NearbyFade.eligible(object, main)) {
                         target = Math.max(target, NearbyFade.amount(object));
                     }
@@ -395,6 +399,9 @@ public final class OpeningFade {
                                                                 && NearbyFade.upper(sprite, lz - floor * 2.4494896f))
                                                 ? 1f
                                                 : opening || nearObject ? 0.5f : 0);
+                        if (fade > 0 && OpeningEdge.translucentFurniture(sprite)) {
+                            fade = 0.5f;
+                        }
                         if (wholeObject) {
                             pendingFurniture.merge(object, fade, Math::max);
                         }

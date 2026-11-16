@@ -143,6 +143,16 @@ public final class MouseInteraction {
         }
     }
 
+    @Patch(className = "viewpoint.interact.LootTargets", methodName = "from", strictMatch = false)
+    public static final class RayStartPatch {
+        @Patch.OnExit
+        public static void exit(@Patch.Return(readOnly = false) float result) {
+            if (Bridge.topDownActive()) {
+                result = 0;
+            }
+        }
+    }
+
     @Patch(className = "viewpoint.interact.LootTargets", methodName = "aimed", strictMatch = false)
     public static final class TargetPatch {
         @Patch.OnExit

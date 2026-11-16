@@ -170,6 +170,16 @@ public final class Bridge {
         VisionSystem.configure(enabled, (int) indicator);
     }
 
+    private static volatile boolean itemMenuEnabled;
+
+    public static void setItemMenuEnabled(boolean enabled) {
+        itemMenuEnabled = enabled;
+    }
+
+    public static boolean hideItemMenu() {
+        return topDownActive() && !itemMenuEnabled;
+    }
+
     public static void setMemoryPolicy(double value) {
         ResourceBudget.configure((int) value);
     }
@@ -400,7 +410,7 @@ public final class Bridge {
     public static final class InteractionPanelPatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return Bridge.topDownActive();
+            return Bridge.hideItemMenu();
         }
     }
 
@@ -409,12 +419,12 @@ public final class Bridge {
     public static final class InteractionKeyPatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return Bridge.topDownActive();
+            return Bridge.hideItemMenu();
         }
 
         @Patch.OnExit
         public static void exit(@Patch.Argument(1) boolean original, @Patch.Return(readOnly = false) boolean result) {
-            if (Bridge.topDownActive()) {
+            if (Bridge.hideItemMenu()) {
                 result = original;
             }
         }
@@ -424,7 +434,7 @@ public final class Bridge {
     public static final class InteractionWheelPatch {
         @Patch.OnEnter(skipOn = true)
         public static boolean enter() {
-            return Bridge.topDownActive();
+            return Bridge.hideItemMenu();
         }
     }
 
@@ -432,7 +442,7 @@ public final class Bridge {
     public static final class InteractionCursorPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (Bridge.topDownActive()) {
+            if (Bridge.hideItemMenu()) {
                 result = false;
             }
         }
@@ -442,7 +452,7 @@ public final class Bridge {
     public static final class InteractionLookPatch {
         @Patch.OnExit
         public static void exit(@Patch.Return(readOnly = false) boolean result) {
-            if (Bridge.topDownActive()) {
+            if (Bridge.hideItemMenu()) {
                 result = false;
             }
         }

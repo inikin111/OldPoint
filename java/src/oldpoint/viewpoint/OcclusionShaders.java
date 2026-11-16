@@ -204,6 +204,12 @@ final class OcclusionShaders {
                         || path.equals("iris/far_shell_fragment.glsl")
                         || path.equals("puddle.frag");
         if (terrainFragment) {
+            // Surface helpers can call this before TERRAIN is inserted near main.
+            // GLSL requires a declaration before such calls.
+            var version = java.util.regex.Pattern.compile("(?m)^\\s*#version[^\\r\\n]*").matcher(source);
+            int declarationAt = version.find() ? version.end() : 0;
+            source = source.substring(0, declarationAt) + "\nfloat oldPointRoomLight();\n"
+                    + source.substring(declarationAt);
             // Preserve native room blackness only when that native feature is enabled.
             source =
                     source.replaceAll(

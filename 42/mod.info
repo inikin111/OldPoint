@@ -1,10 +1,10 @@
-name=OldPoint VP Nightly RC4
-id=OldPointVPNightlyRC4
+name=OldPoint
+id=OldPoint
 author=sinksky
-modversion=0.6.154
+modversion=0.6.156
 versionMin=42.22
 require=Viewpoint
 javaJarFile=media/java/client/OldPoint.jar
 javaPkgName=oldpoint.viewpoint
 ZBVersionMin=2.3.0
-description=测试版。适配 Viewpoint Nightly 0.1.7-rc4。
+description=Compatible with Project Zomboid 42.22 and the official Project Viewpoint 0.1.7 release.
