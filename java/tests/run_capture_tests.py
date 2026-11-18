@@ -23,7 +23,7 @@ public final class Frame {
     }
     public static final class Shot {
         public boolean on, seated;
-        public float fovY, handYaw, handPitch, recoil;
+        public float fovY, handYaw, handPitch, recoil, pivotX, pivotZ;
         public int clears;
         public void clear() { clears++; recoil = 0; }
     }
@@ -45,15 +45,53 @@ public class IsoGameCharacter {
 }
 ''',
     'zombie/characters/IsoPlayer.java': '''package zombie.characters;
-public final class IsoPlayer extends IsoGameCharacter { }
+public final class IsoPlayer extends IsoGameCharacter {
+    public static IsoPlayer getInstance() { return null; }
+    public int getIndex() { return 0; }
+    public boolean isAiming() { return false; }
+    public boolean isDead() { return false; }
+}
 ''',
     'zombie/core/Core.java': '''package zombie.core;
 public final class Core {
     private static final Core INSTANCE = new Core();
+    public boolean panWhileAiming, panWhileDriving;
     public static Core getInstance() { return INSTANCE; }
     public static int getTileScale() { return 2; }
+    public boolean getOptionPanCameraWhileAiming() { return panWhileAiming; }
+    public boolean getOptionPanCameraWhileDriving() { return panWhileDriving; }
+    public float getZoom(int index) { return 1; }
     public int getScreenWidth() { return 1920; }
     public int getScreenHeight() { return 1080; }
+}
+''',
+    'zombie/iso/IsoCamera.java': '''package zombie.iso;
+public final class IsoCamera {
+    public static final PlayerCamera[] cameras = {new PlayerCamera()};
+    public static int getScreenHeight(int index) { return 1080; }
+}
+''',
+    'zombie/iso/PlayerCamera.java': '''package zombie.iso;
+public final class PlayerCamera { public float rightClickX, rightClickY; }
+''',
+    'zombie/GameTime.java': '''package zombie;
+public final class GameTime { public static boolean isGamePaused() { return false; } }
+''',
+    'zombie/ui/UIManager.java': '''package zombie.ui;
+public final class UIManager { public static boolean isModalVisible() { return false; } }
+''',
+    'viewpoint/platform/SettingsWindow.java': '''package viewpoint.platform;
+public final class SettingsWindow { public static boolean shown() { return false; } }
+''',
+    'me/zed_0xff/zombie_buddy/Patch.java': '''package me.zed_0xff.zombie_buddy;
+public @interface Patch {
+    String className();
+    String methodName();
+    boolean strictMatch();
+    @interface OnEnter { boolean skipOn(); }
+    @interface OnExit {}
+    @interface Argument { int value(); }
+    @interface Return { boolean readOnly(); }
 }
 ''',
     'oldpoint/viewpoint/CaptureRuntime.java': '''package oldpoint.viewpoint;
@@ -100,14 +138,18 @@ final class Interior {
 }
 final class TerrainCamera { static float height(float x, float y) { return 0.5f; } }
 final class Zoom { static float factor() { return 1; } }
-final class AimCamera {
-    static boolean shifted;
-    static void pan(Frame frame, IsoPlayer player, float distance, float dx, float dy, float dz) {
-        CaptureRuntime.events.add("pan");
-        if (shifted) { frame.eyeX += 4; frame.eyeY += 2; frame.eyeZ -= 3; }
-    }
+final class Rc2OrbitInterpolation {
+    static boolean capture(boolean active, Frame frame) { return active; }
+}
+final class Rc2CameraInterpolation {
+    static void capture(Frame frame) { frame.cameraShot.pivotX = frame.eyeX; frame.cameraShot.pivotZ = frame.eyeZ; }
+}
+final class Bridge {
+    static boolean topDownActive() { return CameraController.topDownActive(); }
+    static boolean keepAimCursor() { return false; }
 }
 final class Pointer {
+    static boolean overUI() { return false; }
     static void snapshot(Frame frame, float x, float y, float z, float dx, float dy, float dz,
             int width, int height, float terrainHeight) {
         CaptureRuntime.events.add("pointer");
@@ -138,12 +180,12 @@ def main():
         file.write_text(content, encoding='utf-8')
         files.append(str(file))
     files += [str(ROOT / 'java/src/oldpoint/viewpoint' / name)
-              for name in ('CameraCapture.java', 'Layout.java')]
+              for name in ('CameraCapture.java', 'AimCamera.java', 'DrivingCameraFrame.java', 'Layout.java')]
     files.append(str(ROOT / 'java/tests/oldpoint/viewpoint/CameraCaptureTest.java'))
     subprocess.run([str(args.jdk / 'bin/javac.exe'), '--release', '17', '-encoding', 'UTF-8',
                     '-d', str(classes), *files], check=True)
     scenarios = ['geometry', 'disabled', 'on-camera', 'frame-reuse', 'independent-frames',
-                 'read-only-snapshot', 'aim-pan']
+                 'read-only-snapshot', 'aim-pan', 'driving-pan', 'driving-pan-after-capture']
     for scenario in scenarios:
         subprocess.run([str(args.jdk / 'bin/java.exe'), '-cp', str(classes),
                         'oldpoint.viewpoint.CameraCaptureTest', scenario], check=True)

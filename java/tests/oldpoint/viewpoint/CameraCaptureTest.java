@@ -3,6 +3,8 @@ package oldpoint.viewpoint;
 import java.util.List;
 import viewpoint.core.Frame;
 import zombie.characters.IsoPlayer;
+import zombie.core.Core;
+import zombie.iso.IsoCamera;
 
 public final class CameraCaptureTest {
     public static void main(String[] args) {
@@ -97,15 +99,77 @@ public final class CameraCaptureTest {
             case "aim-pan" -> {
                 CameraCapture.capture(frame, player);
                 float[] original = CaptureRuntime.pointerEye;
-                AimCamera.shifted = true;
+                Core.getInstance().panWhileAiming = true;
+                IsoCamera.cameras[0].rightClickX = 100;
                 CameraCapture.capture(frame, player);
                 float[] shifted = CaptureRuntime.pointerEye;
-                near(shifted[0] - original[0], 4);
-                near(shifted[1] - original[1], 2);
-                near(shifted[2] - original[2], -3);
+                float expected = 2 * 14.501786f * (float) Math.tan(Layout.FOV * 0.5) * 100 / 1080;
+                near(shifted[0] - original[0], 0);
+                near(shifted[1] - original[1], 0);
+                near(shifted[2] - original[2], -expected);
                 for (int axis = 0; axis < 3; axis++) {
                     near(shifted[axis], CaptureRuntime.interiorEye[axis]);
                 }
+            }
+            case "driving-pan" -> {
+                Core.getInstance().panWhileDriving = true;
+                player.vehicle = new Object();
+                IsoCamera.cameras[0].rightClickX = 192;
+                IsoCamera.cameras[0].rightClickY = 96;
+                CameraCapture.capture(frame, player);
+                near(frame.eyeX, -5.75f);
+                near(frame.eyeZ, -4.25f);
+
+                CameraController.yaw = (float) (Math.PI / 2);
+                CameraCapture.capture(frame, player);
+                near(frame.eyeX, -5.75f);
+                near(frame.eyeZ, -4.25f);
+                near(CaptureRuntime.pointerEye[0], CaptureRuntime.interiorEye[0]);
+                near(CaptureRuntime.pointerEye[2], CaptureRuntime.interiorEye[2]);
+
+                IsoCamera.cameras[0].rightClickX = -64;
+                IsoCamera.cameras[0].rightClickY = 32;
+                CameraCapture.capture(frame, player);
+                near(frame.eyeX, -2.75f);
+                near(frame.eyeZ, -5.25f);
+
+                IsoCamera.cameras[0].rightClickX = 0;
+                IsoCamera.cameras[0].rightClickY = 0;
+                CameraCapture.capture(frame, player);
+                near(frame.eyeZ, -4.25f);
+
+                IsoCamera.cameras[0].rightClickX = 192;
+                IsoCamera.cameras[0].rightClickY = 96;
+                Core.getInstance().panWhileDriving = false;
+                CameraCapture.capture(frame, player);
+                near(frame.eyeX, -2.75f);
+
+                Core.getInstance().panWhileDriving = true;
+                player.vehicle = null;
+                CameraCapture.capture(frame, player);
+                near(frame.eyeX, -2.75f);
+            }
+            case "driving-pan-after-capture" -> {
+                Core.getInstance().panWhileDriving = true;
+                player.vehicle = new Object();
+                CameraCapture.capture(frame, player);
+                IsoCamera.cameras[0].rightClickX = 530;
+                IsoCamera.cameras[0].rightClickY = -257;
+                DrivingCameraFrame.FillPatch.exit(frame, player);
+                near(frame.eyeX, -2.875f);
+                near(frame.eyeZ, 3.90625f);
+                near(frame.cameraShot.pivotX, frame.eyeX);
+                near(frame.cameraShot.pivotZ, frame.eyeZ);
+                near(CaptureRuntime.interiorEye[2], 3.90625f);
+                near(CaptureRuntime.pointerEye[2], 3.90625f);
+                DrivingCameraFrame.FillPatch.exit(frame, player);
+                near(frame.eyeZ, 3.90625f);
+
+                IsoCamera.cameras[0].rightClickX = 0;
+                IsoCamera.cameras[0].rightClickY = 0;
+                DrivingCameraFrame.FillPatch.exit(frame, player);
+                near(frame.eyeX, -2.75f);
+                near(frame.eyeZ, -4.25f);
             }
             default -> throw new AssertionError("Unknown scenario: " + args[0]);
         }

@@ -52,7 +52,7 @@ public final class Matrix4f {
         file.write_text(content, encoding='utf-8')
         files.append(str(file))
     files += [str(ROOT / 'java/src/oldpoint/viewpoint' / name)
-              for name in ('CameraCapture.java', 'CameraDrawing.java', 'Layout.java')]
+              for name in ('CameraCapture.java', 'CameraDrawing.java', 'AimCamera.java', 'Layout.java')]
     files.append(str(ROOT / 'java/tests/oldpoint/viewpoint/CameraDrawingTest.java'))
     subprocess.run([str(args.jdk / 'bin/javac.exe'), '--release', '17', '-encoding', 'UTF-8',
                     '-d', str(classes), *files], check=True)
